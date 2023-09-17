@@ -12,6 +12,9 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - **PATCH** version when you make backwards compatible bug fixes
 
 
-## [0.0.1] - 2023-09-17
+## [0.1.0] - 2023-09-17
+### Added
+- Initial `S3Url` class for working with `S3`; fully unit tested.
 
+## [0.0.1] - 2023-09-17
 - Initial project commit.
