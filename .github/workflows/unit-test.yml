@@ -24,5 +24,6 @@ jobs:
       run: |
         pip install --upgrade pip==22.0.4
         pip install -r requirements.txt --upgrade
+        pip install -r requirements-pipe.txt --upgrade
         pip install pytest pytest-cov
         pytest tests/ --verbosity=3 --cov simpleboto --cov-fail-under=100
