@@ -74,7 +74,7 @@ class TestS3Url(BaseTest):
     def test_bucket_name_with_prefix(self) -> None:
         self.assertEqual(
             S3Url(bucket=self.bucket, prefix=self.prefix),
-            f's3://{self.bucket}/{self.prefix}'
+            f's3://{self.bucket}/{self.prefix}/'
         )
 
     def test_key_ignore_prefix(self) -> None:
@@ -107,5 +107,5 @@ class TestS3Url(BaseTest):
     def test_repr_of_s3_url(self) -> None:
         self.assertEqual(
             S3Url(url=f's3://{self.bucket}/{self.key}').__repr__(),
-            f'S3Url(Bucket={self.bucket}, Key={self.key}, [Prefix={self.prefix}])'
+            f'S3Url(Bucket={self.bucket}, Key={self.key})'
         )

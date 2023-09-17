@@ -41,7 +41,7 @@ class S3Url(str):
             if key:  # takes precedence
                 url = f"{bucket}/{key}"
             elif prefix:
-                url = f"{bucket}/{prefix.rstrip('/')}"
+                url = f"{bucket}/{prefix.rstrip('/')}/"
             else:
                 url = bucket
             return super().__new__(cls, cls.__validate_url(url))
@@ -85,4 +85,4 @@ class S3Url(str):
     def __repr__(
         self
     ) -> str:
-        return f"S3Url(Bucket={self.bucket}, Key={self.key}, [Prefix={self.prefix}])"
+        return f"S3Url(Bucket={self.bucket}, Key={self.key})"

@@ -11,6 +11,10 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - **MINOR** version when you add functionality in a backwards compatible manner
 - **PATCH** version when you make backwards compatible bug fixes
 
+## [0.2.0] - 2023-09-17
+### Added
+- Initial `S3Client` class for working with `S3`; fully unit tested.
+- This includes functionality to **list objects** and also get **file sizes** from `S3`.
 
 ## [0.1.0] - 2023-09-17
 ### Added
