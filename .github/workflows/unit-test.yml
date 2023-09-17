@@ -1,0 +1,28 @@
+name: Run Unit Tests
+
+on:
+  pull_request:
+    branches:
+    - main
+    - development
+
+jobs:
+  run:
+    name: Test Code
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v3
+
+    - name: Setup Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Run Tests
+      run: |
+        pip install --upgrade pip==22.0.4
+        pip install -r requirements.txt --upgrade
+        pip install pytest pytest-cov
+        pytest tests/ --verbosity=3 --cov simpleboto --cov-fail-under=100
