@@ -3,7 +3,7 @@
 (c) Charlie Collier, all rights reserved
 """
 
-from typing import Optional
+from typing import Optional, Self
 
 from simpleboto.exceptions import (
     S3DelimiterError,
@@ -86,3 +86,18 @@ class S3Url(str):
         self
     ) -> str:
         return f"S3Url(Bucket={self.bucket}, Key={self.key})"
+
+    def join(
+        self,
+        *paths
+    ) -> Self:
+        """
+        Function to append paths to an S3Url.
+
+        :param paths: variable number of arguments to join
+        """
+        joined_paths = '/'.join(paths)
+        delimiter = '' if self.url.endswith('/') else '/'
+        url = f'{self.url}{delimiter}{joined_paths}'
+
+        return S3Url(url=url)

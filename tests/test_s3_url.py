@@ -109,3 +109,25 @@ class TestS3Url(BaseTest):
             S3Url(url=f's3://{self.bucket}/{self.key}').__repr__(),
             f'S3Url(Bucket={self.bucket}, Key={self.key})'
         )
+
+    def test_join_not_ending_with_slash(self) -> None:
+        self.assertEqual(
+            S3Url(url=f's3://{self.bucket}/{self.prefix}').join('a', 'b'),
+            f's3://{self.bucket}/{self.prefix}/a/b'
+        )
+
+    def test_join_ending_with_slash(self) -> None:
+        self.assertEqual(
+            S3Url(url=f's3://{self.bucket}/{self.prefix}/').join('c'),
+            f's3://{self.bucket}/{self.prefix}/c'
+        )
+
+    def test_join_no_arguments(self) -> None:
+        self.assertEqual(
+            S3Url(url=f's3://{self.bucket}/{self.prefix}/').join(),
+            f's3://{self.bucket}/{self.prefix}/'
+        )
+
+    def test_join_error_when_delimiter_in_argument(self) -> None:
+        with self.assertRaisesRegex(S3DelimiterError, 'The S3 URL s3://BUCKET_NAME/TEST/a//b contains //'):
+            S3Url(url=f's3://{self.bucket}/{self.prefix}/').join('a/', 'b')
