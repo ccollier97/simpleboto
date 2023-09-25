@@ -5,6 +5,10 @@ on: push
 #    branches:
 #    - main
 #    - development
+#  workflow_call:
+#    workflows: [
+#      "Run Unit Tests"
+#    ]
 
 jobs:
   build:
@@ -19,6 +23,12 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.x'
+
+    - name: Update Version
+      run: |
+        mv setup.cfg setup_t.cfg
+        sed -r "s/.*version = (.*).*/version = \1.$GITHUB_RUN_ID/" setup_t.cfg > setup.cfg
+        rm setup_t.cfg
 
     - name: Install pypa/build
       run: python3 -m pip install build --user
@@ -57,9 +67,10 @@ jobs:
 
   publish-to-pypi:
     name: Publish Python distribution to PyPI
-    if: startsWith(github.ref, 'refs/tags/') && github.ref == 'refs/heads/main' # only publish to PyPI on tag pushes
+    if: startsWith(github.ref, 'refs/tags/') && github.ref == 'refs/heads/main'  # only publish to PyPI on tag pushes
     needs:
     - build
+    - publish-to-testpypi
     runs-on: ubuntu-latest
     environment:
       name: pypi
