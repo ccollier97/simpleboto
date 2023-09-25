@@ -11,6 +11,10 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - **MINOR** version when you add functionality in a backwards compatible manner
 - **PATCH** version when you make backwards compatible bug fixes
 
+## [0.2.2] - 2023-09-25
+### Added
+- Added `GitHub` action to deal with packaging the project and publishing to PyPI.
+
 ## [0.2.1] - 2023-09-18
 ### Added
 - Added `.join` functionality to `S3Url` objects.
