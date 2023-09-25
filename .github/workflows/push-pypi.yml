@@ -25,9 +25,10 @@ jobs:
         python-version: '3.x'
 
     - name: Update Version
+      if: github.ref != 'refs/heads/main'  # testing version
       run: |
         mv setup.cfg setup_t.cfg
-        sed -r "s/.*version = (.*).*/version = \1.$GITHUB_RUN_ID/" setup_t.cfg > setup.cfg
+        sed -r "s/.*version = (.*).*/version = \1.$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT/" setup_t.cfg > setup.cfg
         rm setup_t.cfg
 
     - name: Install pypa/build
