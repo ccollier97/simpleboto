@@ -6,8 +6,15 @@
 from typing import Dict, Union, Optional
 
 from simpleboto.athena.constants import C
-from simpleboto.athena.utils.data_types import DTypes
-from simpleboto.exceptions import InvalidSchemaType
+from simpleboto.athena.utils.data_types import (
+    DTypes,
+    DecimalDType,
+    VarCharDType
+)
+from simpleboto.exceptions import (
+    InvalidSchemaType,
+    AttributeConditionError
+)
 
 SchemaType = Dict[str, Union[*DTypes]]
 
@@ -40,22 +47,62 @@ class Schema:
         self.validate_schema(schema)
         self.raw = schema
 
+        metadata = metadata if metadata else {}
         self.validate_metadata(metadata)
         self.metadata = metadata
 
     @classmethod
     def validate_schema(
         cls,
-        schema: SchemaType
+        schema: SchemaType,
+        is_athena: Optional[bool] = False
     ) -> None:
         """
         Function to validate the input Schema, for example checking the correct data types are specified.
 
         :param schema: the Schema to validate
+        :param is_athena: whether the Schema is for Athena use or not, as there are extra checks
+            https://docs.aws.amazon.com/athena/latest/ug/create-table.html
         """
         for key in schema:
-            if not any(isinstance(schema[key], dtype) for dtype in DTypes):
-                raise InvalidSchemaType(column=key, dtype=schema[key])
+            c_dtype = schema[key]
+
+            if not any(isinstance(c_dtype, dtype) for dtype in DTypes):
+                raise InvalidSchemaType(column=key, dtype=c_dtype)
+
+            if is_athena:
+                cls.validate_dtype(c_dtype)
+
+    @classmethod
+    def validate_dtype(
+        cls,
+        current_dtype: Union[*DTypes]
+    ) -> None:
+        """
+        Function to validate the specific data type.
+
+        :param current_dtype: the current data type to validate
+        """
+        if isinstance(current_dtype, DecimalDType):
+            if not 0 < current_dtype.precision <= 38:
+                raise AttributeConditionError(
+                    attribute='precision',
+                    class_=DecimalDType.__name__,
+                    condition=f'0 < attr ({current_dtype.precision}) <= 38'
+                )
+            if not 0 <= current_dtype.scale <= 38:
+                raise AttributeConditionError(
+                    attribute='scale',
+                    class_=DecimalDType.__name__,
+                    condition=f'0 <= attr ({current_dtype.scale}) <= 38'
+                )
+        elif isinstance(current_dtype, VarCharDType):
+            if not 0 < current_dtype.length <= 65535:
+                raise AttributeConditionError(
+                    attribute='length',
+                    class_=VarCharDType.__name__,
+                    condition=f'0 < attr ({current_dtype.length}) <= 65535'
+                )
 
     @classmethod
     def validate_metadata(
@@ -68,12 +115,15 @@ class Schema:
         :param metadata: the metadata dictionary to validate
         """
         keys = metadata.keys()
+        valid_keys = [k for k in vars(C) if '__' not in k and not k.endswith('_')]
 
-        if C.FILE_FORMAT in keys:
-            pass
-        if C.FILE_COMPRESSION in keys:
-            pass
+        if any(k not in valid_keys for k in keys):
+            raise Exception()  # an unexpected key so raise an error
+
         if C.PARTITION_SCHEMA in keys:
             cls.validate_schema(metadata[C.PARTITION_SCHEMA])
+
         if C.PARTITION_PROJECTION in keys:
-            pass
+            assert isinstance(metadata[C.PARTITION_PROJECTION], dict), ""
+            for column in metadata[C.PARTITION_PROJECTION]:
+                assert isinstance(metadata[C.PARTITION_PROJECTION][column], dict), ""

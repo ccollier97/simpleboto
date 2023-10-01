@@ -3,7 +3,7 @@
 (c) Charlie Collier, all rights reserved
 """
 
-from typing import List, Optional
+from typing import List, Optional, Any
 
 
 class S3DelimiterError(Exception):
@@ -43,3 +43,16 @@ class InvalidSchemaType(Exception):
         dtype: str
     ) -> None:
         super().__init__(f"The data type {dtype} is not valid for Schema column {column}")
+
+
+class AttributeConditionError(Exception):
+    """
+    Exception class for specifying an invalid attribute value.
+    """
+    def __init__(
+        self,
+        attribute: str,
+        class_: Any,
+        condition: str
+    ) -> None:
+        super().__init__(f"The {attribute} attribute of the {class_} class does not satisfy: {condition}")

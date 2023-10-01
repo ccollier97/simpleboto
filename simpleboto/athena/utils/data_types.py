@@ -4,6 +4,7 @@
 """
 
 import sys
+from typing import Optional
 
 
 class BaseDType:
@@ -41,8 +42,10 @@ class DecimalDType(BaseDType):
     def __init__(
         self,
         precision: int,
-        scale: int
+        scale: Optional[int] = 0
     ) -> None:
+        assert precision >= scale, 'PRECISION must be greater than or equal to SCALE for DecimalDType'
+
         self.precision = precision
         self.scale = scale
 

@@ -17,3 +17,15 @@ def get_provided_parameters(
     non_null_params = {k: v for k, v in parameter_dict.items() if v}
 
     return list(non_null_params.keys())
+
+
+def get_file(
+    location: str
+) -> str:
+    """
+    Function to load the contents of the file and return it as a string.
+
+    :param location: the location of the file to open
+    """
+    with open(location, 'r') as f:
+        return f.read()
