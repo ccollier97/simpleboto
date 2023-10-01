@@ -11,6 +11,12 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - **MINOR** version when you add functionality in a backwards compatible manner
 - **PATCH** version when you make backwards compatible bug fixes
 
+## [0.3.0] - 2023-10-01
+### Added
+- Added `AthenaClient` class with **CREATE TABLE** functionality.
+- Also added `Schema` and `data_types` in order to create _schema_ which can be used as input for the **CREATE TABLE** functionality.
+- Moreover, a `CLogger` class for logging functionality (to stream and a file).
+
 ## [0.2.1] - 2023-09-18
 ### Added
 - Added `.join` functionality to `S3Url` objects.

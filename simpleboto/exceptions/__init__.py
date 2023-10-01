@@ -1,9 +1,11 @@
 from simpleboto.exceptions.custom_exceptions import (
     S3DelimiterError,
-    NoParameterError
+    NoParameterError,
+    InvalidSchemaType
 )
 
 __all__ = [
     'S3DelimiterError',
-    'NoParameterError'
+    'NoParameterError',
+    'InvalidSchemaType'
 ]
