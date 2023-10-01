@@ -10,7 +10,10 @@ class S3DelimiterError(Exception):
     """
     Exception class for S3 URLs with double slashes //.
     """
-    def __init__(self, url: str) -> None:
+    def __init__(
+        self,
+        url: str
+    ) -> None:
         super().__init__(f"The S3 URL {url} contains //")
 
 
