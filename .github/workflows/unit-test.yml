@@ -7,8 +7,35 @@ on:
     - development
 
 jobs:
-  run:
+  run-tests:
     name: Test Code
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Run Tests
+      run: |
+        pip install --upgrade pip==22.0.4
+        pip install -r requirements.txt --upgrade
+        pip install -r requirements-pipe.txt --upgrade
+        pip install pytest pytest-cov
+        pytest tests/ --verbosity=3 --cov simpleboto --cov-fail-under=100
+
+  build-and-publish-test-pypi:
+    uses: ./.github/workflows/push-pypi.yml
+    name: Build and Publish to Test PyPI
+    with:
+      version-number: ${GITHUB_RUN_ID}
+
+  run-tests-from-pypi:
+    name: Test Code using PyPI Package
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Source Code
