@@ -44,7 +44,7 @@ class TestLogger(BaseTest):
             log_instance.info(message="INFO LOG")
             log_instance.error(message="ERROR LOG")
 
-        self.assertEqual(logs.output[0], 'ERROR:test_logger:ERROR LOG')
+        self.assertEqual(logs.output[0], f'ERROR:{__name__}:ERROR LOG')
 
     def test_log_to_file(self) -> None:
         log_instance = CLogger(__name__, log_file_path=self.log_test_path)
