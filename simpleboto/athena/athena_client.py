@@ -11,6 +11,10 @@ import boto3
 from simpleboto.athena.constants import C
 from simpleboto.athena.utils.schema import Schema, SchemaType
 from simpleboto.boto3_base import Boto3Base
+from simpleboto.exceptions import (
+    UnexpectedParameterError,
+    NoParameterError
+)
 from simpleboto.s3.s3_url import S3Url
 from simpleboto.utils import get_file
 
@@ -46,7 +50,7 @@ class AthenaClient(Boto3Base):
         metadata = schema.metadata
         cls.validate_metadata(metadata)
 
-        sql_template = get_file(location=os.path.join(cls.SQL_DIR, 'create'))
+        sql_template = get_file(location=os.path.join(cls.SQL_DIR, 'create_table.sql'))
 
         column_schema = cls.get_column_schema(schema.raw)
         row_format = cls.get_storage_info(metadata)
@@ -74,17 +78,29 @@ class AthenaClient(Boto3Base):
 
         :param metadata: the dictionary of metadata values
         """
+        req_fields = [
+            C.TABLE_NAME,
+            C.S3_BUCKET,
+            C.S3_PREFIX,
+            C.FILE_FORMAT,
+            C.FILE_COMPRESSION
+        ]
+        given_keys = metadata.keys()
+        missing_keys = [k for k in req_fields if k not in given_keys]
 
-        # REQUIRED: - ensure all are present...
-        #     TABLE_NAME = 'TABLE_NAME'
-        #     S3_BUCKET = 'S3_BUCKET'
-        #     S3_PREFIX = 'S3_PREFIX'
-        #     FILE_FORMAT = 'FILE_FORMAT'
-        #     FILE_COMPRESSION = 'FILE_COMPRESSION'
+        if missing_keys:
+            raise NoParameterError('Schema metadata', req_param=missing_keys)
 
-        # also validate all PARTITION columns have a PROJECTION if PROJECTION is specified
+        if C.PARTITION_PROJECTION in given_keys:
+            if C.PARTITION_SCHEMA not in given_keys:
+                raise NoParameterError(C.PARTITION_PROJECTION, req_param=C.PARTITION_SCHEMA)
 
-        return
+            for column in metadata[C.PARTITION_PROJECTION]:
+                if column not in metadata[C.PARTITION_SCHEMA]:
+                    raise NoParameterError(
+                        f'{C.PARTITION_SCHEMA} dictionary as it is in {C.PARTITION_PROJECTION}',
+                        req_param=column
+                    )
 
     @staticmethod
     def get_column_schema(
@@ -95,7 +111,7 @@ class AthenaClient(Boto3Base):
 
         :param column_schema: the dictionary of the columns with their data types
         """
-        return ",\n\t".join(f'{col} {column_schema[col].ATHENA}' for col in column_schema)
+        return ",\n\t".join(f'`{col}` {column_schema[col].ATHENA}' for col in column_schema)
 
     @staticmethod
     def get_storage_info(
@@ -187,6 +203,15 @@ class AthenaClient(Boto3Base):
         Function to return a dictionary of the TBLPROPERTIES relating to the partition projection.
 
         :param projection_dict: the partition projection dictionary as specified in the Schema
+            this has the following format:
+                {
+                    'COLUMN_NAME': {
+                        'type': 'ENUM'|'INTEGER'|'DATE'|'INJECTION',
+                        **kwargs
+                    }
+                }
+            see the documentation for a full explanation of the allowed values:
+            https://docs.aws.amazon.com/athena/latest/ug/partition-projection-supported-types.html
         """
         tbl_props = {}
 
@@ -195,7 +220,9 @@ class AthenaClient(Boto3Base):
 
             type_ = metadata.get('type').lower()
             supported_proj_types = ['enum', 'integer', 'date', 'injected']
-            assert type_ in supported_proj_types, f"The projection type {type_} is not supported"
+
+            if type_ not in supported_proj_types:
+                raise UnexpectedParameterError(param=type_, possible_values=supported_proj_types)
 
             function_name = f'get_{type_}_projection'
             tbl_props.update(cls.__getattribute__(cls, function_name)(column, metadata))
@@ -213,9 +240,16 @@ class AthenaClient(Boto3Base):
         :param column: the column name for this projection
         :param metadata: the metadata containing information about the projection
         """
+        values = metadata.get('values')
+
+        if not values:
+            raise NoParameterError(f'ENUM projection on column {column}', req_param='values')
+        if not isinstance(values, list):
+            raise AssertionError(f"The values attribute for ENUM projection must be a LIST; current: {type(values)}")
+
         return {
-            f'projection.{column}.values': ','.join(metadata.get('values')),  # TODO: assert
-            f'projection.{column}.type': 'enum'
+            f'projection.{column}.type': 'enum',
+            f'projection.{column}.values': ','.join(values)
         }
 
     @staticmethod
@@ -231,13 +265,18 @@ class AthenaClient(Boto3Base):
         """
         kwargs = {}
 
+        range_ = metadata.get('range')
+
+        if not range_:
+            raise NoParameterError(f'INTEGER projection on column {column}', req_param='range')
+
         for key in ['interval', 'digits']:
             if key in metadata:
                 kwargs[f'projection.{column}.{key}'] = metadata.get(key)
 
         return {
             f'projection.{column}.type': 'integer',
-            f'projection.{column}.range': metadata.get('range'),  # TODO: assert
+            f'projection.{column}.range': range_,
             **kwargs
         }
 
@@ -254,14 +293,22 @@ class AthenaClient(Boto3Base):
         """
         kwargs = {}
 
+        range_ = metadata.get('range')
+        format_ = metadata.get('format')
+
+        if not range_:
+            raise NoParameterError(f'DATE projection on column {column}', req_param='range')
+        if not format_:
+            raise NoParameterError(f'DATE projection on column {column}', req_param='format')
+
         for key in ['interval', 'interval.unit']:
             if key in metadata:
                 kwargs[f'projection.{column}.{key}'] = metadata.get(key)
 
         return {
             f'projection.{column}.type': 'date',
-            f'projection.{column}.range': metadata.get('range'),  # TODO: assert
-            f'projection.{column}.format': metadata.get('format'),  # TODO: assert
+            f'projection.{column}.range': range_,
+            f'projection.{column}.format': format_,
             **kwargs
         }
 

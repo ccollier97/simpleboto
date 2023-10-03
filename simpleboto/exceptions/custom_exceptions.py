@@ -24,16 +24,28 @@ class NoParameterError(Exception):
     def __init__(
         self,
         callable_: str,
-        req_param: Optional[str] = None,
+        req_param: Optional[Any] = None,
         arguments: Optional[List[str]] = None
     ) -> None:
-        arguments = arguments if arguments else []
+        optional = f"; current call: {callable_}({', '.join(arguments)})" if arguments else ''
         super().__init__(
-            f"Required parameter: {req_param} for {callable_}; current call: {callable_}({', '.join(arguments)})"
+            f"Required parameter: {req_param} for {callable_}{optional}"
         )
 
 
-class InvalidSchemaType(Exception):
+class UnexpectedParameterError(Exception):
+    """
+    Exception class for specifying an unexpected key.
+    """
+    def __init__(
+        self,
+        param: Any,
+        possible_values: Any
+    ) -> None:
+        super().__init__(f"The parameter(s) {param} is/are unexpected; must be one of {possible_values}")
+
+
+class InvalidSchemaTypeError(Exception):
     """
     Exception class for specifying a data type not valid for a Schema.
     """
@@ -52,7 +64,7 @@ class AttributeConditionError(Exception):
     def __init__(
         self,
         attribute: str,
-        class_: Any,
+        class_name: Any,
         condition: str
     ) -> None:
-        super().__init__(f"The {attribute} attribute of the {class_} class does not satisfy: {condition}")
+        super().__init__(f"The {attribute} attribute of the {class_name} class does not satisfy: {condition}")

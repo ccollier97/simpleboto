@@ -41,10 +41,7 @@ class TestS3Url(BaseTest):
             S3Url(prefix=self.prefix)
 
     def test_no_parameters(self) -> None:
-        with self.assertRaisesRegex(
-            NoParameterError,
-            r'Required parameter: ANY for S3Url; current call: S3Url\(\)'
-        ):
+        with self.assertRaisesRegex(NoParameterError, r'Required parameter: ANY for S3Url'):
             S3Url()
 
     def test_url_without_protocol(self) -> None:

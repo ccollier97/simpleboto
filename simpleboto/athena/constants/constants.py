@@ -22,4 +22,6 @@ class C:
     # Miscellaneous
     PARQUET_ = 'parquet'
     CSV_ = 'csv'
+
     SNAPPY_ = 'snappy'
+    GZIP_ = 'gzip'

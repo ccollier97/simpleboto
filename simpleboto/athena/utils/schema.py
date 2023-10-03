@@ -12,8 +12,9 @@ from simpleboto.athena.utils.data_types import (
     VarCharDType
 )
 from simpleboto.exceptions import (
-    InvalidSchemaType,
-    AttributeConditionError
+    InvalidSchemaTypeError,
+    AttributeConditionError,
+    UnexpectedParameterError
 )
 
 SchemaType = Dict[str, Union[*DTypes]]
@@ -37,12 +38,15 @@ class Schema:
                 'COLUMN 3': BooleanDType()
             }
         :param metadata: a dictionary containing optional metadata about the given Schema; compatible keys include:
-            S3_BUCKET               The S3 bucket name where the data is stored in Athena
-            S3_PREFIX               The S3 prefix where the data is stored in Athena
-            FILE_FORMAT             The file format of the stored files
-            FILE_COMPRESSION        The file compression of the stored files
-            PARTITION_SCHEMA        A SchemaType object containing the partition columns (if required)
-            PARTITION_PROJECTION    A dictionary containing the projection properties for each partition column
+            DATABASE_NAME        [str]  The Athena database name where the Schema exists
+            TABLE_NAME           [str]  The Athena table name where the Schema exists
+            S3_BUCKET            [str]  The S3 bucket name where the data is stored in Athena
+            S3_PREFIX            [str]  The S3 prefix where the data is stored in Athena
+            FILE_FORMAT          [str]  The file format of the stored files
+            FILE_COMPRESSION     [str]  The file compression of the stored files
+            SKIP_HEADER          [bool] Whether to skip the header row in CSV files or not in Athena
+            PARTITION_SCHEMA     [dict] A SchemaType object containing the partition columns (if required)
+            PARTITION_PROJECTION [dict] A dictionary containing the projection properties for each partition column
         """
         self.validate_schema(schema)
         self.raw = schema
@@ -68,7 +72,7 @@ class Schema:
             c_dtype = schema[key]
 
             if not any(isinstance(c_dtype, dtype) for dtype in DTypes):
-                raise InvalidSchemaType(column=key, dtype=c_dtype)
+                raise InvalidSchemaTypeError(column=key, dtype=c_dtype)
 
             if is_athena:
                 cls.validate_dtype(c_dtype)
@@ -87,20 +91,20 @@ class Schema:
             if not 0 < current_dtype.precision <= 38:
                 raise AttributeConditionError(
                     attribute='precision',
-                    class_=DecimalDType.__name__,
+                    class_name=DecimalDType.__name__,
                     condition=f'0 < attr ({current_dtype.precision}) <= 38'
                 )
             if not 0 <= current_dtype.scale <= 38:
                 raise AttributeConditionError(
                     attribute='scale',
-                    class_=DecimalDType.__name__,
+                    class_name=DecimalDType.__name__,
                     condition=f'0 <= attr ({current_dtype.scale}) <= 38'
                 )
         elif isinstance(current_dtype, VarCharDType):
             if not 0 < current_dtype.length <= 65535:
                 raise AttributeConditionError(
                     attribute='length',
-                    class_=VarCharDType.__name__,
+                    class_name=VarCharDType.__name__,
                     condition=f'0 < attr ({current_dtype.length}) <= 65535'
                 )
 
@@ -116,14 +120,22 @@ class Schema:
         """
         keys = metadata.keys()
         valid_keys = [k for k in vars(C) if '__' not in k and not k.endswith('_')]
+        missing_keys = [k for k in keys if k not in valid_keys]
 
-        if any(k not in valid_keys for k in keys):
-            raise Exception()  # an unexpected key so raise an error
+        if missing_keys:
+            raise UnexpectedParameterError(param=missing_keys, possible_values=valid_keys)
+
+        if C.SKIP_HEADER in keys:
+            if not isinstance(metadata[C.SKIP_HEADER], bool):
+                raise AssertionError(f"{C.SKIP_HEADER} is not of type bool")
 
         if C.PARTITION_SCHEMA in keys:
             cls.validate_schema(metadata[C.PARTITION_SCHEMA])
 
         if C.PARTITION_PROJECTION in keys:
-            assert isinstance(metadata[C.PARTITION_PROJECTION], dict), ""
+            if not isinstance(metadata[C.PARTITION_PROJECTION], dict):
+                raise AssertionError(f"{C.PARTITION_PROJECTION} data is not a dict")
+
             for column in metadata[C.PARTITION_PROJECTION]:
-                assert isinstance(metadata[C.PARTITION_PROJECTION][column], dict), ""
+                if not isinstance(metadata[C.PARTITION_PROJECTION][column], dict):
+                    raise AssertionError( f"{C.PARTITION_PROJECTION}[{column}] data is not a dict")

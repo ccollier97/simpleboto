@@ -13,7 +13,7 @@ from simpleboto.athena.utils import (
     VarCharDType
 )
 from simpleboto.exceptions import (
-    InvalidSchemaType,
+    InvalidSchemaTypeError,
     AttributeConditionError
 )
 from tests.base_test import BaseTest
@@ -31,13 +31,13 @@ class TestSchema(BaseTest):
                 'COL1': StringDType(),
                 'COL2': TimestampDType()
             })
-        except InvalidSchemaType:
+        except InvalidSchemaTypeError:
             valid = False
 
         self.assertTrue(valid)
 
     def test_validate_schema_invalid(self) -> None:
-        with self.assertRaisesRegex(InvalidSchemaType, "The data type string is not valid for Schema column COL2"):
+        with self.assertRaisesRegex(InvalidSchemaTypeError, "The data type string is not valid for Schema column COL2"):
             Schema.validate_schema(schema={
                 'COL1': StringDType(),
                 'COL2': 'string'
