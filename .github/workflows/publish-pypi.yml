@@ -1,0 +1,59 @@
+name: Build and Publish to PyPI
+
+on:
+  push:
+    branches:
+    - main
+    - development
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-distribution.yml
+    name: Build Distribution
+
+  publish-to-testpypi:
+    name: Publish Python distribution to TestPyPI
+    if: ${{ github.ref != 'refs/heads/main' }}
+    needs:
+    - build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/simpleboto
+    permissions:
+      id-token: write  # mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
+
+    - name: Publish distribution to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
+  publish-to-pypi:
+    name: Publish Python distribution to PyPI
+    if: ${{ github.ref == 'refs/heads/main' }}
+    needs:
+    - build
+    - publish-to-testpypi
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/simpleboto
+    permissions:
+      id-token: write  # mandatory for trusted publishing
+
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v3
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

@@ -7,17 +7,17 @@ on:
     - development
 
 jobs:
-  run:
+  run-tests:
     name: Test Code
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Source Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.x'
         cache: 'pip'
 
     - name: Run Tests

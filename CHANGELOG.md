@@ -11,6 +11,10 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - **MINOR** version when you add functionality in a backwards compatible manner
 - **PATCH** version when you make backwards compatible bug fixes
 
+## [0.3.1] - 2023-10-07
+### Added
+- Added `GitHub` action to deal with packaging the project and publishing to PyPI.
+
 ## [0.3.0] - 2023-10-01
 ### Added
 - Added a `CLogger` class for logging functionality (to stream and a file).
