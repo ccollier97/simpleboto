@@ -134,9 +134,10 @@ class NoParameterError(Exception):
         args, param_sub = '', ''
 
         if context:
+            param_sub = f' for {context}'
             if arguments:
                 args = ', '.join(arguments)
-            param_sub = ' for {context}({})'.format(args, context=self.context)
+                param_sub = f'{param_sub}({args})'
 
         self.err_msg = base_msg.format(param_sub, param=param)
 

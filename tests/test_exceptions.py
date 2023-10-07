@@ -81,7 +81,7 @@ class TestExceptions(BaseTest):
             raise NoParameterError(param='TEST_PARAM')
 
     def test_no_parameter_error_with_context(self) -> None:
-        with self.assertRaisesRegex(NoParameterError, r'Required parameter TEST_PARAM for FUNCTION\(\)'):
+        with self.assertRaisesRegex(NoParameterError, r'Required parameter TEST_PARAM for FUNCTION'):
             raise NoParameterError(param='TEST_PARAM', context='FUNCTION')
 
     def test_no_parameter_error_with_context_and_arguments(self) -> None:

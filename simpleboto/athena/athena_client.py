@@ -4,7 +4,7 @@
 """
 
 import os
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 import boto3
 
@@ -16,7 +16,7 @@ from simpleboto.exceptions import (
     NoParameterError
 )
 from simpleboto.s3.s3_url import S3Url
-from simpleboto.utils import get_file
+from simpleboto.utils import Utils
 
 
 class AthenaClient(Boto3Base):
@@ -37,8 +37,22 @@ class AthenaClient(Boto3Base):
         super().__init__('athena', region_name, boto3_session)
         self.athena = self.client
 
+    @staticmethod
+    def get_key(
+        key_: Any,
+        dict_: dict
+    ) -> Any:
+        """
+        Function to retrieve the key_ value from the dictionary dict_.
+
+        :param key_: the key of the dictionary to extract the value for
+        :param dict_: the dictionary to search for the value
+        """
+        value = dict_.get(key_)
+        return value.lower() if isinstance(value, str) else value
+
     @classmethod
-    def get_create_table(
+    def get_create_table(  # TODO: TEST - with and without database name
         cls,
         schema: Schema
     ) -> str:
@@ -50,26 +64,28 @@ class AthenaClient(Boto3Base):
         metadata = schema.metadata
         cls.validate_metadata(metadata)
 
-        sql_template = get_file(location=os.path.join(cls.SQL_DIR, 'create_table.sql'))
+        sql_template = Utils.get_file(location=os.path.join(cls.SQL_DIR, 'create_table.sql'))
 
+        database_name = cls.get_key(C.DATABASE_NAME, metadata) if C.DATABASE_NAME in metadata else ''
         column_schema = cls.get_column_schema(schema.raw)
-        row_format = cls.get_storage_info(metadata)
+        serde = cls.get_serde(metadata)
         location = cls.get_s3_location(metadata)
         partitioned_by = cls.get_partition_info(metadata)
-        tbl_properties = cls.get_tbl_properties(metadata)
+        tbl_properties = cls.format_dict(cls.get_tbl_properties(metadata), kv_delimiter=' = ')
 
         return sql_template.format(
-            database_name=f'{metadata.get(C.DATABASE_NAME).lower()}.' if C.DATABASE_NAME in metadata else '',
-            table_name=metadata.get(C.TABLE_NAME).lower(),
+            database_name=database_name,
+            table_name=cls.get_key(C.TABLE_NAME, metadata),
             column_schema=column_schema,
             partitioned_by=partitioned_by,
-            row_format_serde=row_format,
+            row_format_serde=serde,
             location=location,
             tbl_properties=tbl_properties
         )
 
-    @staticmethod
-    def validate_metadata(
+    @classmethod
+    def validate_metadata(  # TODO: TEST AND FIX
+        cls,
         metadata: dict
     ) -> None:
         """
@@ -91,6 +107,12 @@ class AthenaClient(Boto3Base):
         if missing_keys:
             raise NoParameterError('Schema metadata', req_param=missing_keys)
 
+        if cls.get_key(C.FILE_FORMAT, metadata) not in [C.PARQUET_, C.CSV_]:
+            raise Exception()
+
+        if cls.get_key(C.FILE_COMPRESSION, metadata) not in [C.SNAPPY_, C.GZIP_]:
+            raise Exception()
+
         if C.PARTITION_PROJECTION in given_keys:
             if C.PARTITION_SCHEMA not in given_keys:
                 raise NoParameterError(C.PARTITION_PROJECTION, req_param=C.PARTITION_SCHEMA)
@@ -102,8 +124,9 @@ class AthenaClient(Boto3Base):
                         req_param=column
                     )
 
-    @staticmethod
+    @classmethod
     def get_column_schema(
+        cls,
         column_schema: SchemaType
     ) -> str:
         """
@@ -111,26 +134,40 @@ class AthenaClient(Boto3Base):
 
         :param column_schema: the dictionary of the columns with their data types
         """
-        return ",\n\t".join(f'`{col}` {column_schema[col].ATHENA}' for col in column_schema)
+        return cls.format_dict({f'`{col}`': dtype.ATHENA for col, dtype in column_schema.items()})
 
     @staticmethod
-    def get_storage_info(
+    def format_dict(
+        dict_: dict,
+        kv_delimiter: Optional[str] = ' ',
+        line_delimiter: Optional[str] = ',\n\t'
+    ) -> str:
+        """
+        Function to take an input dictionary and transform it into a string
+
+        :param dict_: the dictionary to turn into a string
+        :param kv_delimiter: the key-value delimiter, e.g. {key: value} becomes f'{key}{kv_delimiter}{value}'
+        :param line_delimiter: the delimiter between each key of the dictionary, e.g. f'{kv1}{line_delimiter}{kv2}'
+        """
+        return line_delimiter.join([f'{k}{kv_delimiter}{v}' for k, v in dict_.items()])
+
+    @classmethod
+    def get_serde(
+        cls,
         metadata: dict
     ) -> str:
         """
-        Function to return the storage format part of the CREATE TABLE query.
-        This includes the ROW FORMAT SERDE setting.
+        Function to return the SERDE for the CREATE TABLE query.
 
         :param metadata: the Schema metadata containing the S3 bucket and prefix keys
         """
-        f_format = metadata.get(C.FILE_FORMAT).lower()
-
-        hive_format = {
+        serde = {
             C.PARQUET_: 'ql.io.parquet.serde.ParquetHiveSerDe',
             C.CSV_: 'serde2.OpenCSVSerde'
         }
+        f_format = cls.get_key(C.FILE_FORMAT, metadata)
 
-        return f'org.apache.hadoop.hive.{hive_format[f_format]}'
+        return f'org.apache.hadoop.hive.{serde[f_format]}'
 
     @staticmethod
     def get_s3_location(
@@ -144,9 +181,8 @@ class AthenaClient(Boto3Base):
         """
         bucket = metadata.get(C.S3_BUCKET)
         prefix = metadata.get(C.S3_PREFIX)
-        location = S3Url(bucket=bucket, prefix=prefix)
 
-        return location.url
+        return S3Url(bucket=bucket, prefix=prefix).url
 
     @classmethod
     def get_partition_info(
@@ -159,16 +195,20 @@ class AthenaClient(Boto3Base):
         :param metadata: the Schema metadata containing the S3 bucket and prefix keys
         :return: the formatted string containing the partition column schema, or '' if no partition columns are present
         """
-        if metadata.get(C.PARTITION_SCHEMA):
-            return f'PARTITIONED BY (\n\t{cls.get_column_schema(column_schema=metadata[C.PARTITION_SCHEMA])}\n)'
-        else:
-            return ''
+        partition_str = ''
+        partition_schema = metadata.get(C.PARTITION_SCHEMA)
+
+        if partition_schema:
+            column_schema = cls.get_column_schema(column_schema=partition_schema)
+            partition_str = f'PARTITIONED BY (\n\t{column_schema}\n)'
+
+        return partition_str
 
     @classmethod
     def get_tbl_properties(
         cls,
         metadata: dict
-    ) -> str:
+    ) -> dict:
         """
         Function to return the TBLPROPERTIES part of the CREATE TABLE query.
         This includes information about the file format, as well as partition projection if specified.
@@ -176,23 +216,23 @@ class AthenaClient(Boto3Base):
         :param metadata: the Schema metadata containing the S3 bucket and prefix keys
         """
         tbl_props = {}
-        f_format = metadata.get(C.FILE_FORMAT).lower()
 
-        if f_format == C.PARQUET_:
-            tbl_props.update({
-                'classification': C.PARQUET_,
-                'compressionType': C.SNAPPY_
-            })
-        elif f_format == C.CSV_ and metadata.get(C.SKIP_HEADER):
-            tbl_props.update({
-                'skip.header.line.count': '1'
-            })
+        f_format = cls.get_key(C.FILE_FORMAT, metadata)
+        f_compression = cls.get_key(C.FILE_COMPRESSION, metadata)
+
+        tbl_props.update({
+            'classification': f_format,
+            'compressionType': f_compression
+        })
+
+        if f_format == C.CSV_ and metadata.get(C.SKIP_HEADER):
+            tbl_props.update({'skip.header.line.count': '1'})
 
         if C.PARTITION_PROJECTION in metadata:
             tbl_props.update({'projection.enabled': 'TRUE'})
             tbl_props.update(cls.get_partition_proj_properties(projection_dict=metadata[C.PARTITION_PROJECTION]))
 
-        return ",\n\t".join(f"'{k}' = '{tbl_props[k]}'" for k in tbl_props)
+        return {f"'{k}'": f"'{prop}'" for k, prop in tbl_props.items()}
 
     @classmethod
     def get_partition_proj_properties(
@@ -206,7 +246,7 @@ class AthenaClient(Boto3Base):
             this has the following format:
                 {
                     'COLUMN_NAME': {
-                        'type': 'ENUM'|'INTEGER'|'DATE'|'INJECTION',
+                        'type': 'ENUM'|'INTEGER'|'DATE'|'INJECTED',
                         **kwargs
                     }
                 }
@@ -214,13 +254,12 @@ class AthenaClient(Boto3Base):
             https://docs.aws.amazon.com/athena/latest/ug/partition-projection-supported-types.html
         """
         tbl_props = {}
+        supported_proj_types = ['enum', 'integer', 'date', 'injected']
 
         for column in projection_dict:
             metadata = projection_dict[column]
 
-            type_ = metadata.get('type').lower()
-            supported_proj_types = ['enum', 'integer', 'date', 'injected']
-
+            type_ = cls.get_key('type', metadata)
             if type_ not in supported_proj_types:
                 raise UnexpectedParameterError(param=type_, possible_values=supported_proj_types)
 
@@ -243,9 +282,9 @@ class AthenaClient(Boto3Base):
         values = metadata.get('values')
 
         if not values:
-            raise NoParameterError(f'ENUM projection on column {column}', req_param='values')
-        if not isinstance(values, list):
-            raise AssertionError(f"The values attribute for ENUM projection must be a LIST; current: {type(values)}")
+            raise NoParameterError(param='values', context=f'ENUM projection on column {column}')
+
+        Utils.check_type(key='values for ENUM projection', value=values, expected_type=list)
 
         return {
             f'projection.{column}.type': 'enum',
@@ -268,7 +307,7 @@ class AthenaClient(Boto3Base):
         range_ = metadata.get('range')
 
         if not range_:
-            raise NoParameterError(f'INTEGER projection on column {column}', req_param='range')
+            raise NoParameterError(param='range', context=f'INTEGER projection on column {column}')
 
         for key in ['interval', 'digits']:
             if key in metadata:
@@ -297,9 +336,9 @@ class AthenaClient(Boto3Base):
         format_ = metadata.get('format')
 
         if not range_:
-            raise NoParameterError(f'DATE projection on column {column}', req_param='range')
+            raise NoParameterError(param='range', context=f'DATE projection on column {column}')
         if not format_:
-            raise NoParameterError(f'DATE projection on column {column}', req_param='format')
+            raise NoParameterError(param='format', context=f'DATE projection on column {column}')
 
         for key in ['interval', 'interval.unit']:
             if key in metadata:

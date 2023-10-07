@@ -3,7 +3,7 @@
 (c) Charlie Collier, all rights reserved
 """
 
-from typing import Dict, Union, Optional, Type
+from typing import Dict, Union, Optional
 
 from simpleboto.athena.constants import C
 from simpleboto.athena.utils.data_types import (
@@ -14,9 +14,9 @@ from simpleboto.athena.utils.data_types import (
 from simpleboto.exceptions import (
     InvalidSchemaTypeError,
     AttributeConditionError,
-    UnexpectedParameterError,
-    InvalidTypeError
+    UnexpectedParameterError
 )
+from simpleboto.utils import Utils
 
 SchemaType = Dict[str, Union[*DTypes]]
 
@@ -124,34 +124,17 @@ class Schema:
             raise UnexpectedParameterError(param=missing_keys, possible_values=valid_keys)
 
         if C.SKIP_HEADER in keys:
-            cls.check_type(key=C.SKIP_HEADER, value=metadata[C.SKIP_HEADER], expected_type=bool)
+            Utils.check_type(key=C.SKIP_HEADER, value=metadata[C.SKIP_HEADER], expected_type=bool)
 
         if C.PARTITION_SCHEMA in keys:
             cls.validate_schema(metadata[C.PARTITION_SCHEMA])
 
         if C.PARTITION_PROJECTION in keys:
-            cls.check_type(key=C.PARTITION_PROJECTION, value=metadata[C.PARTITION_PROJECTION], expected_type=dict)
+            Utils.check_type(key=C.PARTITION_PROJECTION, value=metadata[C.PARTITION_PROJECTION], expected_type=dict)
 
             for column in metadata[C.PARTITION_PROJECTION]:
-                cls.check_type(
+                Utils.check_type(
                     key=f'{C.PARTITION_PROJECTION}[{column}]',
                     value=metadata[C.PARTITION_PROJECTION][column],
                     expected_type=dict
                 )
-
-    @classmethod
-    def check_type(
-        cls,
-        key: str,
-        value: str,
-        expected_type: Type
-    ) -> None:
-        """
-        Function to check the type of value is of expected type, and raise an Exception if not.
-
-        :param key: the key and identifier for the exception logging
-        :param value: the value to check
-        :param expected_type: the expected type for value
-        """
-        if not isinstance(value, expected_type):
-            raise InvalidTypeError(variable=key, expected_type=expected_type)
