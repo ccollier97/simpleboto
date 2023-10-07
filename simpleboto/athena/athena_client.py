@@ -43,7 +43,7 @@ class AthenaClient(Boto3Base):
         dict_: dict
     ) -> Any:
         """
-        Function to retrieve the key_ value from the dictionary dict_.
+        Function to retrieve the key value from the dictionary dict_.
 
         :param key: the key of the dictionary to extract the value for
         :param dict_: the dictionary to search for the value
