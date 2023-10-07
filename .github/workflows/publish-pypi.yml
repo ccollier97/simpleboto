@@ -5,21 +5,11 @@ on:
     branches:
     - main
     - development
-    - feature/*
-  workflow_call:
 
 jobs:
-  get-version:
-    uses: ./.github/workflows/get-version.yml
-    name: Get Version for PyPI
-
   build:
     uses: ./.github/workflows/build-distribution.yml
     name: Build Distribution
-    needs:
-    - get-version
-    with:
-      version: ${{ needs.get-version.outputs.PACKAGE_VERSION }}
 
   publish-to-testpypi:
     name: Publish Python distribution to TestPyPI

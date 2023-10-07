@@ -12,14 +12,6 @@ jobs:
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
-    - name: Update Version
-      run: |
-        echo VERSION
-        echo $version
-        sed -r "s/.*version = (.*).*/version = $version/" setup.cfg > setup_tmp.cfg
-        cat setup_tmp.cfg
-        mv setup_tmp.cfg setup.cfg
-
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
