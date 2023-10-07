@@ -7,10 +7,11 @@ from typing import Optional, Union, List
 
 import boto3
 
+from simpleboto.boto3_base import Boto3Base
 from simpleboto.s3.s3_url import S3Url
 
 
-class S3Client:
+class S3Client(Boto3Base):
     """
     Wrapper for the boto3 S3 client.
     """
@@ -23,12 +24,8 @@ class S3Client:
         :param region_name: the name of the AWS region (if not provided, ensure credentials have been exported)
         :param boto3_session: a provided boto3_session
         """
-        kwargs = {}
-        if region_name:
-            kwargs['region_name'] = region_name
-
-        client = boto3_session.client if boto3_session else boto3.client
-        self.s3 = client(service_name='s3', **kwargs)
+        super().__init__('s3', region_name, boto3_session)
+        self.s3 = self.client
 
     def list(
         self,
