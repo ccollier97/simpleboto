@@ -1,4 +1,4 @@
-name: Get PyPI Version for Testing
+name: Get PyPI Version
 
 on:
   workflow_call:

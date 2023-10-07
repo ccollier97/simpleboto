@@ -6,9 +6,6 @@ on:
       version:
         type: string
         description: The version to use for the package build
-      environment:
-        type: string
-        description: The stage to run (the name of the branch)
 
 jobs:
   build:
@@ -20,10 +17,9 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Update Version
-      if: ${{ github.event.inputs.environment != main }}
       run: |
         sed -r "s/.*version = (.*).*/version = ${{ github.event.inputs.version }}/" setup.cfg > setup.cfg.tmp
-        mv setup.cfg.tmp setup.cfg
+        mv setup.cfg.tmp setup.cfg && rm setup.cfg.tmp
 
     - name: Set up Python
       uses: actions/setup-python@v4
