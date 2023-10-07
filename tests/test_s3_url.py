@@ -27,21 +27,15 @@ class TestS3Url(BaseTest):
             S3Url(url=f's3://{self.bucket}//{self.key}')
 
     def test_key_no_bucket(self) -> None:
-        with self.assertRaisesRegex(
-            NoParameterError,
-            r'Required parameter: bucket for S3Url; current call: S3Url\(key\)'
-        ):
+        with self.assertRaisesRegex(NoParameterError, 'Required parameter bucket for S3Url'):
             S3Url(key=self.key)
 
     def test_prefix_no_bucket(self) -> None:
-        with self.assertRaisesRegex(
-            NoParameterError,
-            r'Required parameter: bucket for S3Url; current call: S3Url\(prefix\)'
-        ):
+        with self.assertRaisesRegex(NoParameterError, 'Required parameter bucket for S3Url'):
             S3Url(prefix=self.prefix)
 
     def test_no_parameters(self) -> None:
-        with self.assertRaisesRegex(NoParameterError, r'Required parameter: ANY for S3Url'):
+        with self.assertRaisesRegex(NoParameterError, 'Required parameter ANY for S3Url'):
             S3Url()
 
     def test_url_without_protocol(self) -> None:

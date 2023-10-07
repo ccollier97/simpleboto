@@ -25,6 +25,22 @@ class Schema:
     """
     Schema class containing all information about the relevant dataframe.
     """
+    REQUIRED_ATHENA_FIELDS = [
+        C.TABLE_NAME,
+        C.S3_BUCKET,
+        C.S3_PREFIX,
+        C.FILE_FORMAT,
+        C.FILE_COMPRESSION
+    ]
+    REQUIRED_ATHENA_FORMAT = [
+        C.PARQUET_,
+        C.CSV_
+    ]
+    REQUIRED_ATHENA_COMPRESSION = [
+        C.SNAPPY_,
+        C.GZIP_
+    ]
+
     def __init__(
         self,
         schema: SchemaType,
@@ -39,15 +55,24 @@ class Schema:
                 'COLUMN 3': BooleanDType()
             }
         :param metadata: a dictionary containing optional metadata about the given Schema; compatible keys include:
-            DATABASE_NAME        [str]  The Athena database name where the Schema exists
-            TABLE_NAME           [str]  The Athena table name where the Schema exists
-            S3_BUCKET            [str]  The S3 bucket name where the data is stored in Athena
-            S3_PREFIX            [str]  The S3 prefix where the data is stored in Athena
-            FILE_FORMAT          [str]  The file format of the stored files
-            FILE_COMPRESSION     [str]  The file compression of the stored files
-            SKIP_HEADER          [bool] Whether to skip the header row in CSV files or not in Athena
-            PARTITION_SCHEMA     [dict] A SchemaType object containing the partition columns (if required)
-            PARTITION_PROJECTION [dict] A dictionary containing the projection properties for each partition column
+            DATABASE_NAME        [str]        The Athena database name where the Schema exists
+            TABLE_NAME           [str]        The Athena table name where the Schema exists
+            S3_BUCKET            [str]        The S3 bucket name where the data is stored in Athena
+            S3_PREFIX            [str]        The S3 prefix where the data is stored in Athena
+            FILE_FORMAT          [str]        The file format of the stored files
+            FILE_COMPRESSION     [str]        The file compression of the stored files
+            SKIP_HEADER          [bool]       Whether to skip the header row in CSV files or not in Athena
+            PARTITION_SCHEMA     [SchemaType] A SchemaType object containing the partition columns (if required)
+            PARTITION_PROJECTION [dict]       A dict containing the projection properties for each partition column
+                this has the following format:
+                    {
+                        'COLUMN_NAME': {
+                            'type': 'ENUM'|'INTEGER'|'DATE'|'INJECTED',
+                            **kwargs
+                        }
+                    }
+                see the documentation for a full explanation of the allowed values:
+                https://docs.aws.amazon.com/athena/latest/ug/partition-projection-supported-types.html
         """
         self.validate_schema(schema)
         self.raw = schema

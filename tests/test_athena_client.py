@@ -12,13 +12,17 @@ from simpleboto.athena.constants import C
 from simpleboto.athena.utils.data_types import (
     StringDType,
     IntegerDType,
-    DecimalDType
+    DecimalDType,
+    BooleanDType,
+    VarCharDType
 )
+from simpleboto.athena.utils.schema import Schema
 from simpleboto.exceptions import (
     NoParameterError,
     InvalidTypeError,
     UnexpectedParameterError
 )
+from simpleboto.utils import Utils
 from tests.base_test import BaseTest
 
 TEST_COLUMN = 'TEST_COLUMN'
@@ -31,6 +35,14 @@ class TestAthenaClient(BaseTest):
 
         self.test_class = 'test_athena_client'
         self.test_data_dir = os.path.join(self.test_data_dir, self.test_class)
+
+        self.req_athena_fields_dict = {
+            C.TABLE_NAME: 'test_table',
+            C.S3_BUCKET: 'test-bucket',
+            C.S3_PREFIX: 'test/prefix',
+            C.FILE_FORMAT: C.PARQUET_,
+            C.FILE_COMPRESSION: C.SNAPPY_
+        }
 
         self.ac = AthenaClient(region_name=self.env_vars['REGION'])
 
@@ -280,7 +292,7 @@ class TestAthenaClient(BaseTest):
                     }
                 }
             ),
-            'PARTITIONED BY (\n\t`COLUMN1` string,\n\t`COLUMN2` integer\n)'
+            '\nPARTITIONED BY (\n\t`COLUMN1` string,\n\t`COLUMN2` integer\n)'
         )
 
     def test_get_partition_info_no_partitions(self) -> None:
@@ -360,12 +372,133 @@ class TestAthenaClient(BaseTest):
 
     def test_get_key(self) -> None:
         self.assertEqual(
-            AthenaClient.get_key(key_='KEY', dict_={'KEY': ['A', 'B']}),
+            AthenaClient.get_key(key='KEY', dict_={'KEY': ['A', 'B']}),
             ['A', 'B']
         )
 
     def test_get_key_string(self) -> None:
         self.assertEqual(
-            AthenaClient.get_key(key_='KEY', dict_={'KEY': 'VALUE'}),
+            AthenaClient.get_key(key='KEY', dict_={'KEY': 'VALUE'}),
             'value'
         )
+
+    def test_get_create_table_with_db_parquet(self) -> None:
+        schema = Schema(
+            schema={
+                'COLUMN1': VarCharDType(100),
+                'COLUMN2': IntegerDType(),
+                'COLUMN3': StringDType()
+            },
+            metadata={
+                C.DATABASE_NAME: 'test_db',
+                C.TABLE_NAME: 'test_table',
+                C.S3_BUCKET: 'test-bucket',
+                C.S3_PREFIX: 'test_prefix',
+                C.FILE_FORMAT: C.PARQUET_,
+                C.FILE_COMPRESSION: C.SNAPPY_
+            }
+        )
+        output_ct = AthenaClient.get_create_table(schema=schema)
+
+        expected_ct = Utils.get_file(
+            location=os.path.join(self.test_data_dir, 'create_table', 'with_db_parquet.sql')
+        )
+        self.assertEqual(output_ct, expected_ct)
+
+    def test_get_create_table_without_db_csv(self) -> None:
+        schema = Schema(
+            schema={
+                'COLUMN1': StringDType(),
+                'COLUMN2': BooleanDType(),
+                'COLUMN3': IntegerDType()
+            },
+            metadata={
+                C.TABLE_NAME: 'test_table',
+                C.S3_BUCKET: 'test-bucket',
+                C.S3_PREFIX: 'test_prefix',
+                C.FILE_FORMAT: C.PARQUET_,
+                C.FILE_COMPRESSION: C.SNAPPY_,
+                C.PARTITION_SCHEMA: {
+                    'COLUMN4': StringDType()
+                },
+                C.PARTITION_PROJECTION: {
+                    'COLUMN4': {
+                        'type': 'enum',
+                        'values': ['VAL1', 'VAL2']
+                    }
+                }
+            }
+        )
+        output_ct = AthenaClient.get_create_table(schema=schema)
+
+        expected_ct = Utils.get_file(
+            location=os.path.join(self.test_data_dir, 'create_table', 'without_db_csv.sql')
+        )
+        self.assertEqual(output_ct, expected_ct)
+
+    def test_validate_metadata_missing_required_fields(self) -> None:
+        with self.assertRaisesRegex(
+            NoParameterError,
+            r"Required parameter \['S3_PREFIX', 'FILE_FORMAT'\] for Schema metadata"
+        ):
+            AthenaClient.validate_metadata(
+                metadata={
+                    C.TABLE_NAME: 'test_table',
+                    C.FILE_COMPRESSION: C.SNAPPY_,
+                    C.S3_BUCKET: 'test-bucket'
+                }
+            )
+
+    def test_validate_metadata_unexpected_file_format(self) -> None:
+        self.req_athena_fields_dict[C.FILE_FORMAT] = 'FAKE_FORMAT'
+
+        with self.assertRaisesRegex(
+            UnexpectedParameterError,
+            r"The parameter FILE_FORMAT is unexpected for Schema metadata; must be one of \['parquet', 'csv'\]"
+        ):
+            AthenaClient.validate_metadata(metadata=self.req_athena_fields_dict)
+
+    def test_validate_metadata_unexpected_file_compression(self) -> None:
+        self.req_athena_fields_dict[C.FILE_COMPRESSION] = 'FAKE_COMPRESSION'
+
+        with self.assertRaisesRegex(
+            UnexpectedParameterError,
+            r"The parameter FILE_COMPRESSION is unexpected for Schema metadata; must be one of \['snappy', 'gzip'\]"
+        ):
+            AthenaClient.validate_metadata(metadata=self.req_athena_fields_dict)
+
+    def test_validate_metadata_no_partition_schema_with_projection(self) -> None:
+        self.req_athena_fields_dict[C.PARTITION_PROJECTION] = dict()
+
+        with self.assertRaisesRegex(
+            NoParameterError,
+            "Required parameter PARTITION_SCHEMA for Schema metadata if PARTITION_PROJECTION is used"
+        ):
+            AthenaClient.validate_metadata(metadata=self.req_athena_fields_dict)
+
+    def test_validate_metadata_projection_and_partition_mismatch(self) -> None:
+        self.req_athena_fields_dict[C.PARTITION_SCHEMA] = {'COLUMN1': None, 'COLUMN2': None}
+        self.req_athena_fields_dict[C.PARTITION_PROJECTION] = {'COLUMN1': {}}
+
+        with self.assertRaisesRegex(
+            AssertionError,
+            f'{C.PARTITION_PROJECTION} and {C.PARTITION_SCHEMA} do not contain the same number of columns'
+        ):
+            AthenaClient.validate_metadata(metadata=self.req_athena_fields_dict)
+
+    def test_validate_metadata_projection_not_in_partition_schema(self) -> None:
+        self.req_athena_fields_dict[C.PARTITION_SCHEMA] = {
+            'COLUMN1': None,
+            'COLUMN2': None
+        }
+        self.req_athena_fields_dict[C.PARTITION_PROJECTION] = {
+            'COLUMN1': {},
+            'COLUMN3': {}
+        }
+
+        with self.assertRaisesRegex(
+            NoParameterError,
+            f"Required parameter {{'COLUMN2'}} for Schema metadata {C.PARTITION_PROJECTION} "
+            f"as it is present in {C.PARTITION_SCHEMA}"
+        ):
+            AthenaClient.validate_metadata(metadata=self.req_athena_fields_dict)

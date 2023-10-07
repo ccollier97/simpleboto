@@ -3,26 +3,12 @@
 (c) Charlie Collier, all rights reserved
 """
 
-from typing import List, Type
+from typing import Type, Any
 
 from simpleboto.exceptions import InvalidTypeError
 
 
 class Utils:
-    @classmethod
-    def get_provided_parameters(
-        cls,
-        parameter_dict: dict
-    ) -> List[str]:
-        """
-        Function to return a list of the input variables which were provided.
-
-        :param parameter_dict: dictionary with key-values 'parameterName' and 'parameterValue'
-        """
-        non_null_params = {k: v for k, v in parameter_dict.items() if v}
-
-        return list(non_null_params.keys())
-
     @classmethod
     def get_file(
         cls,
@@ -40,7 +26,7 @@ class Utils:
     def check_type(
         cls,
         key: str,
-        value: str,
+        value: Any,
         expected_type: Type
     ) -> None:
         """

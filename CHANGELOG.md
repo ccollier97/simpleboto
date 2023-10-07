@@ -15,6 +15,11 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 ### Added
 - Added `AthenaClient` class with **CREATE TABLE** functionality.
 - Also added `Schema` and `data_types` in order to create _schema_ which can be used as input for the **CREATE TABLE** functionality.
+### Amended
+- Put the utility functions into a `Utils` class.
+- Added new custom exceptions and changed previous ones to be more general.
+- Updated old custom exceptions to the new format.
+
 
 ## [0.3.0] - 2023-10-01
 ### Added

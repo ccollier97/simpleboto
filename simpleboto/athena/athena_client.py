@@ -39,20 +39,20 @@ class AthenaClient(Boto3Base):
 
     @staticmethod
     def get_key(
-        key_: Any,
+        key: Any,
         dict_: dict
     ) -> Any:
         """
         Function to retrieve the key_ value from the dictionary dict_.
 
-        :param key_: the key of the dictionary to extract the value for
+        :param key: the key of the dictionary to extract the value for
         :param dict_: the dictionary to search for the value
         """
-        value = dict_.get(key_)
+        value = dict_.get(key)
         return value.lower() if isinstance(value, str) else value
 
     @classmethod
-    def get_create_table(  # TODO: TEST - with and without database name
+    def get_create_table(
         cls,
         schema: Schema
     ) -> str:
@@ -66,25 +66,20 @@ class AthenaClient(Boto3Base):
 
         sql_template = Utils.get_file(location=os.path.join(cls.SQL_DIR, 'create_table.sql'))
 
-        database_name = cls.get_key(C.DATABASE_NAME, metadata) if C.DATABASE_NAME in metadata else ''
-        column_schema = cls.get_column_schema(schema.raw)
-        serde = cls.get_serde(metadata)
-        location = cls.get_s3_location(metadata)
-        partitioned_by = cls.get_partition_info(metadata)
-        tbl_properties = cls.format_dict(cls.get_tbl_properties(metadata), kv_delimiter=' = ')
+        kwargs = {
+            'database_name': cls.get_key(C.DATABASE_NAME, metadata) + '.' if C.DATABASE_NAME in metadata else '',
+            'table_name': cls.get_key(C.TABLE_NAME, metadata),
+            'column_schema': cls.get_column_schema(schema.raw),
+            'row_format_serde': cls.get_serde(metadata),
+            'location': cls.get_s3_location(metadata),
+            'partitioned_by': cls.get_partition_info(metadata),
+            'tbl_properties': cls.format_dict(cls.get_tbl_properties(metadata), kv_delimiter=' = ')
+        }
 
-        return sql_template.format(
-            database_name=database_name,
-            table_name=cls.get_key(C.TABLE_NAME, metadata),
-            column_schema=column_schema,
-            partitioned_by=partitioned_by,
-            row_format_serde=serde,
-            location=location,
-            tbl_properties=tbl_properties
-        )
+        return sql_template.format(**kwargs)
 
     @classmethod
-    def validate_metadata(  # TODO: TEST AND FIX
+    def validate_metadata(
         cls,
         metadata: dict
     ) -> None:
@@ -94,35 +89,64 @@ class AthenaClient(Boto3Base):
 
         :param metadata: the dictionary of metadata values
         """
-        req_fields = [
-            C.TABLE_NAME,
-            C.S3_BUCKET,
-            C.S3_PREFIX,
-            C.FILE_FORMAT,
-            C.FILE_COMPRESSION
-        ]
+        context = 'Schema metadata'
+
         given_keys = metadata.keys()
-        missing_keys = [k for k in req_fields if k not in given_keys]
+        missing_keys = [k for k in Schema.REQUIRED_ATHENA_FIELDS if k not in given_keys]
 
         if missing_keys:
-            raise NoParameterError('Schema metadata', req_param=missing_keys)
+            raise NoParameterError(param=missing_keys, context=context)
 
-        if cls.get_key(C.FILE_FORMAT, metadata) not in [C.PARQUET_, C.CSV_]:
-            raise Exception()
+        if cls.get_key(C.FILE_FORMAT, metadata) not in Schema.REQUIRED_ATHENA_FORMAT:
+            raise UnexpectedParameterError(
+                param=C.FILE_FORMAT,
+                context=context,
+                possible_values=Schema.REQUIRED_ATHENA_FORMAT
+            )
 
-        if cls.get_key(C.FILE_COMPRESSION, metadata) not in [C.SNAPPY_, C.GZIP_]:
-            raise Exception()
+        if cls.get_key(C.FILE_COMPRESSION, metadata) not in Schema.REQUIRED_ATHENA_COMPRESSION:
+            raise UnexpectedParameterError(
+                param=C.FILE_COMPRESSION,
+                context=context,
+                possible_values=Schema.REQUIRED_ATHENA_COMPRESSION
+            )
+
+        cls.validate_metadata_partition(metadata=metadata, context=context)
+
+    @staticmethod
+    def validate_metadata_partition(
+        metadata: dict,
+        context: str
+    ) -> None:
+        """
+        Function to validate the partition schema and partition projection parts of the Schema metadata.
+
+        :param metadata: the dictionary of metadata values
+        :param context: the base context for exception logging
+        """
+        given_keys = metadata.keys()
 
         if C.PARTITION_PROJECTION in given_keys:
-            if C.PARTITION_SCHEMA not in given_keys:
-                raise NoParameterError(C.PARTITION_PROJECTION, req_param=C.PARTITION_SCHEMA)
+            if C.PARTITION_SCHEMA in given_keys:
+                partition_proj = metadata[C.PARTITION_PROJECTION]
+                partition_schema = metadata[C.PARTITION_SCHEMA]
 
-            for column in metadata[C.PARTITION_PROJECTION]:
-                if column not in metadata[C.PARTITION_SCHEMA]:
-                    raise NoParameterError(
-                        f'{C.PARTITION_SCHEMA} dictionary as it is in {C.PARTITION_PROJECTION}',
-                        req_param=column
+                if len(partition_proj) != len(partition_schema):
+                    raise AssertionError(
+                        f'{C.PARTITION_PROJECTION} and {C.PARTITION_SCHEMA} do not contain the same number of columns'
                     )
+
+                miss_proj_cols = set(partition_schema.keys()).difference(partition_proj.keys())
+                if miss_proj_cols:
+                    raise NoParameterError(
+                        param=miss_proj_cols,
+                        context=f'{context} {C.PARTITION_PROJECTION} as it is present in {C.PARTITION_SCHEMA}'
+                    )
+            else:
+                raise NoParameterError(
+                    param=C.PARTITION_SCHEMA,
+                    context=f'{context} if {C.PARTITION_PROJECTION} is used'
+                )
 
     @classmethod
     def get_column_schema(
@@ -200,7 +224,7 @@ class AthenaClient(Boto3Base):
 
         if partition_schema:
             column_schema = cls.get_column_schema(column_schema=partition_schema)
-            partition_str = f'PARTITIONED BY (\n\t{column_schema}\n)'
+            partition_str = f'\nPARTITIONED BY (\n\t{column_schema}\n)'
 
         return partition_str
 

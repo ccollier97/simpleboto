@@ -23,6 +23,10 @@ class TestExceptions(BaseTest):
         with self.assertRaisesRegex(InvalidTypeError, 'Variable STRING should have type <class \'int\'>'):
             raise InvalidTypeError(variable='STRING', expected_type=int)
 
+    def test_invalid_type_error_with_context(self) -> None:
+        with self.assertRaisesRegex(InvalidTypeError, r"Variable STRING \(hi\) should have type <class 'int'>"):
+            raise InvalidTypeError(variable='STRING', value='hi', expected_type=int)
+
     def test_attribute_condition_error_class_string(self) -> None:
         with self.assertRaisesRegex(
             AttributeConditionError,

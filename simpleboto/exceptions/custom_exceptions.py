@@ -38,16 +38,21 @@ class InvalidTypeError(Exception):
     def __init__(
         self,
         variable: Any,
-        expected_type: Type
+        expected_type: Type,
+        value: Optional[Any] = None
     ) -> None:
         """
         :param variable: the name of the variable which has invalid type
         :param expected_type: the expected type for the variable
+        :param value: the actual value of the variable, for logging in the exception
         """
         self.variable = variable
+        self.value = value
         self.expected_type = expected_type
 
-        self.err_msg = f"Variable {self.variable} should have type {self.expected_type}"
+        value_str = f' ({self.value})' if value else ''
+
+        self.err_msg = f"Variable {self.variable}{value_str} should have type {self.expected_type}"
 
         super().__init__(self.err_msg)
 
