@@ -1,57 +1,33 @@
 name: Build and Publish to PyPI
 
-# You can only download artifacts in a workflow that were uploaded during the same workflow run.
-
-on: push
-#  push:
-#    branches:
-#    - main
-#    - development
-#  workflow_call:
-#    workflows: [
-#      "Run Unit Tests"
-#    ]
+on:
+  push:
+    branches:
+    - main
+    - development
+    - feature/*
+  workflow_call:
 
 env:
-  TESTING: ${github.ref != 'refs/heads/main'}  # testing version
+  BRANCH_NAME: ${GITHUB_REF##*/}
 
 jobs:
   get-version:
-    uses: ./.github/workflows/update-version.yml
+    uses: ./.github/workflows/get-version.yml
     name: Get Version for PyPI
-    with:
-      TESTING: env.TESTING
 
   build:
+    uses: ./.github/workflows/build-distribution.yml
     name: Build Distribution
     needs:
     - get-version
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout Source Code
-      if: ${{ env.TESTING == false }}
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-
-    - name: Install pypa/build
-      run: python3 -m pip install build --user
-
-    - name: Build a binary wheel and a source tarball
-      run: python3 -m build
-
-    - name: Store the distribution packages
-      uses: actions/upload-artifact@v3
-      with:
-        name: python-package-distributions
-        path: dist/
+    with:
+      version: ${{ needs.get-version.outputs.VERSION }}
+      environment: ${ env.BRANCH_NAME }
 
   publish-to-testpypi:
     name: Publish Python distribution to TestPyPI
+    if: ${{ env.BRANCH_NAME != main }}
     needs:
     - build
     runs-on: ubuntu-latest
@@ -75,7 +51,7 @@ jobs:
 
   publish-to-pypi:
     name: Publish Python distribution to PyPI
-    if: startsWith(github.ref, 'refs/tags/') && ${{ env.TESTING == false }}  # only publish to PyPI on tag pushes
+    if: startsWith(github.ref, 'refs/tags/') && ${{ env.BRANCH_NAME == main }}  # only publish to PyPI on main pushes
     needs:
     - build
     - publish-to-testpypi
