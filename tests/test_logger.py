@@ -57,6 +57,6 @@ class TestLogger(BaseTest):
         ts_regex = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3}'
         ignore_time_logs = [re.sub(ts_regex, '', i) for i in expected_logs.split('\n')][:-1]
         self.assertListEqual(ignore_time_logs, [
-            'test_logger |  | INFO     | TEST INFO LOG',
-            'test_logger |  | WARNING  | TEST WARNING LOG'
+            f'{__name__} |  | INFO     | TEST INFO LOG',
+            f'{__name__} |  | WARNING  | TEST WARNING LOG'
         ])
