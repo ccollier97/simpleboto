@@ -9,7 +9,6 @@ from simpleboto.exceptions import (
     S3DelimiterError,
     NoParameterError
 )
-from simpleboto.utils import Utils
 
 
 class S3Url(str):
