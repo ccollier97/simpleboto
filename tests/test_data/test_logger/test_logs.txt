@@ -1,2 +1,0 @@
-test_logger | 2023-10-01 13:08:47.020 | INFO     | TEST INFO LOG
-test_logger | 2023-10-01 13:08:47.021 | WARNING  | TEST WARNING LOG
