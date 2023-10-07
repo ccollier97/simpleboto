@@ -40,7 +40,6 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }}
     needs:
     - build
-    - publish-to-testpypi
     runs-on: ubuntu-latest
     environment:
       name: pypi
