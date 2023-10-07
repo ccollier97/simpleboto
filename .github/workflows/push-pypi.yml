@@ -51,7 +51,7 @@ jobs:
 
   publish-to-pypi:
     name: Publish Python distribution to PyPI
-    if: startsWith(github.ref, 'refs/tags/') && ${{ env.BRANCH_NAME == main }}  # only publish to PyPI on main pushes
+    if: startsWith(github.ref, 'refs/tags/') && ${ env.BRANCH_NAME == main }  # only publish to PyPI on main pushes
     needs:
     - build
     - publish-to-testpypi
