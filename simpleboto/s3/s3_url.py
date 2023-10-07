@@ -3,7 +3,7 @@
 (c) Charlie Collier, all rights reserved
 """
 
-from typing import Optional, Self
+from typing import Optional
 
 from simpleboto.exceptions import (
     S3DelimiterError,
@@ -90,7 +90,7 @@ class S3Url(str):
     def join(
         self,
         *paths
-    ) -> Self:
+    ):
         """
         Function to append paths to an S3Url.
 
