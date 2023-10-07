@@ -19,7 +19,7 @@ jobs:
     - name: Update Version
       run: |
         sed -r "s/.*version = (.*).*/version = ${{ github.event.inputs.version }}/" setup.cfg > setup.cfg.tmp
-        mv setup.cfg.tmp setup.cfg && rm setup.cfg.tmp
+        mv setup.cfg.tmp setup.cfg
 
     - name: Set up Python
       uses: actions/setup-python@v4
