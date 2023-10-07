@@ -3,7 +3,14 @@
 (c) Charlie Collier, all rights reserved
 """
 
-from typing import List, Optional, Any
+import inspect
+from collections.abc import Iterable as Iter
+from typing import (
+    Any,
+    Type,
+    Iterable,
+    Optional
+)
 
 
 class S3DelimiterError(Exception):
@@ -14,47 +21,35 @@ class S3DelimiterError(Exception):
         self,
         url: str
     ) -> None:
-        super().__init__(f"The S3 URL {url} contains //")
+        """
+        :param url: the URL which is invalid
+        """
+        self.url = url
+
+        self.err_msg = f"The S3 URL {url} contains //"
+
+        super().__init__(self.err_msg)
 
 
-class NoParameterError(Exception):
+class InvalidTypeError(Exception):
     """
-    Exception class for when there are missing arguments in callables.
-    """
-    def __init__(
-        self,
-        callable_: str,
-        req_param: Optional[Any] = None,
-        arguments: Optional[List[str]] = None
-    ) -> None:
-        optional = f"; current call: {callable_}({', '.join(arguments)})" if arguments else ''
-        super().__init__(
-            f"Required parameter: {req_param} for {callable_}{optional}"
-        )
-
-
-class UnexpectedParameterError(Exception):
-    """
-    Exception class for specifying an unexpected key.
+    Exception class for when a variable is not of the required type.
     """
     def __init__(
         self,
-        param: Any,
-        possible_values: Any
+        variable: Any,
+        expected_type: Type
     ) -> None:
-        super().__init__(f"The parameter(s) {param} is/are unexpected; must be one of {possible_values}")
+        """
+        :param variable: the name of the variable which has invalid type
+        :param expected_type: the expected type for the variable
+        """
+        self.variable = variable
+        self.expected_type = expected_type
 
+        self.err_msg = f"Variable {self.variable} should have type {self.expected_type}"
 
-class InvalidSchemaTypeError(Exception):
-    """
-    Exception class for specifying a data type not valid for a Schema.
-    """
-    def __init__(
-        self,
-        column: str,
-        dtype: str
-    ) -> None:
-        super().__init__(f"The data type {dtype} is not valid for Schema column {column}")
+        super().__init__(self.err_msg)
 
 
 class AttributeConditionError(Exception):
@@ -64,7 +59,106 @@ class AttributeConditionError(Exception):
     def __init__(
         self,
         attribute: str,
-        class_name: Any,
+        class_: Any,
         condition: str
     ) -> None:
-        super().__init__(f"The {attribute} attribute of the {class_name} class does not satisfy: {condition}")
+        """
+        :param attribute: the name of the attribute
+        :param class_: the class the attribute belongs to
+        :param condition: the condition which is causing the error to be raised
+        """
+        self.attribute = attribute
+        self.class_ = class_.__name__ if inspect.isclass(class_) else class_
+        self.condition = condition
+
+        self.err_msg = f"The attribute {self.attribute} of the class {self.class_} does not satisfy {self.condition}"
+
+        super().__init__(self.err_msg)
+
+
+class UnexpectedParameterError(Exception):
+    """
+    Exception class for specifying an unexpected key.
+    """
+    def __init__(
+        self,
+        param: Any,
+        possible_values: Optional[Any] = None,
+        context: Optional[str] = None
+    ) -> None:
+        """
+        :param param: the parameter name which is unexpected
+        :param possible_values: the possible values for this parameter
+        :param context: the context for the error, e.g. a method name
+        """
+        self.param = param
+        self.possible_values = possible_values
+        self.context = context
+
+        base_msg = 'The parameter{} {param} {} unexpected{}{}'
+        param_sub = ['', 'is', '', '']
+
+        if isinstance(param, Iter) and not isinstance(param, str):
+            param_sub[0] = 's'
+            param_sub[1] = 'are'
+        if context:
+            param_sub[2] = f' for {context}'
+        if possible_values:
+            param_sub[3] = f'; must be one of {possible_values}'
+
+        self.err_msg = base_msg.format(*param_sub, param=self.param)
+
+        super().__init__(self.err_msg)
+
+
+class NoParameterError(Exception):
+    """
+    Exception class for when there are missing arguments in callables.
+    """
+    def __init__(
+        self,
+        param: Any,
+        context: Optional[str] = None,
+        arguments: Optional[Iterable] = None
+    ) -> None:
+        """
+        :param param: the parameter which is missing
+        :param context: the callable from where the parameter is missing
+        :param arguments: the given arguments to the callable
+        """
+        self.param = param
+        self.context = context
+        self.arguments = arguments
+
+        base_msg = 'Required parameter {param}{}'
+        args, param_sub = '', ''
+
+        if context:
+            if arguments:
+                args = ', '.join(arguments)
+            param_sub = ' for {context}({})'.format(args, context=self.context)
+
+        self.err_msg = base_msg.format(param_sub, param=param)
+
+        super().__init__(self.err_msg)
+
+
+class InvalidSchemaTypeError(Exception):
+    """
+    Exception class for specifying a data type not valid for a Schema.
+    """
+    def __init__(
+        self,
+        dtype: Any,
+        column: str
+    ) -> None:
+        """
+        :param dtype: the data type of the current column
+        :param column: the column containing the incorrect data type
+        """
+        self.dtype = dtype
+        self.column = column
+
+        self.err_msg = f"The data type {dtype} is not valid for column {column}"
+
+        super().__init__(self.err_msg)

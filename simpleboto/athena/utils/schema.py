@@ -3,7 +3,7 @@
 (c) Charlie Collier, all rights reserved
 """
 
-from typing import Dict, Union, Optional
+from typing import Dict, Union, Optional, Type
 
 from simpleboto.athena.constants import C
 from simpleboto.athena.utils.data_types import (
@@ -14,7 +14,8 @@ from simpleboto.athena.utils.data_types import (
 from simpleboto.exceptions import (
     InvalidSchemaTypeError,
     AttributeConditionError,
-    UnexpectedParameterError
+    UnexpectedParameterError,
+    InvalidTypeError
 )
 
 SchemaType = Dict[str, Union[*DTypes]]
@@ -58,15 +59,12 @@ class Schema:
     @classmethod
     def validate_schema(
         cls,
-        schema: SchemaType,
-        is_athena: Optional[bool] = False
+        schema: SchemaType
     ) -> None:
         """
         Function to validate the input Schema, for example checking the correct data types are specified.
 
         :param schema: the Schema to validate
-        :param is_athena: whether the Schema is for Athena use or not, as there are extra checks
-            https://docs.aws.amazon.com/athena/latest/ug/create-table.html
         """
         for key in schema:
             c_dtype = schema[key]
@@ -74,8 +72,7 @@ class Schema:
             if not any(isinstance(c_dtype, dtype) for dtype in DTypes):
                 raise InvalidSchemaTypeError(column=key, dtype=c_dtype)
 
-            if is_athena:
-                cls.validate_dtype(c_dtype)
+            cls.validate_dtype(c_dtype)
 
     @classmethod
     def validate_dtype(
@@ -86,26 +83,27 @@ class Schema:
         Function to validate the specific data type.
 
         :param current_dtype: the current data type to validate
+            https://docs.aws.amazon.com/athena/latest/ug/create-table.html
         """
         if isinstance(current_dtype, DecimalDType):
             if not 0 < current_dtype.precision <= 38:
                 raise AttributeConditionError(
                     attribute='precision',
-                    class_name=DecimalDType.__name__,
-                    condition=f'0 < attr ({current_dtype.precision}) <= 38'
+                    class_=DecimalDType,
+                    condition=f'0 < x ({current_dtype.precision}) <= 38'
                 )
             if not 0 <= current_dtype.scale <= 38:
                 raise AttributeConditionError(
                     attribute='scale',
-                    class_name=DecimalDType.__name__,
-                    condition=f'0 <= attr ({current_dtype.scale}) <= 38'
+                    class_=DecimalDType,
+                    condition=f'0 <= x ({current_dtype.scale}) <= 38'
                 )
         elif isinstance(current_dtype, VarCharDType):
             if not 0 < current_dtype.length <= 65535:
                 raise AttributeConditionError(
                     attribute='length',
-                    class_name=VarCharDType.__name__,
-                    condition=f'0 < attr ({current_dtype.length}) <= 65535'
+                    class_=VarCharDType,
+                    condition=f'0 < x ({current_dtype.length}) <= 65535'
                 )
 
     @classmethod
@@ -126,16 +124,34 @@ class Schema:
             raise UnexpectedParameterError(param=missing_keys, possible_values=valid_keys)
 
         if C.SKIP_HEADER in keys:
-            if not isinstance(metadata[C.SKIP_HEADER], bool):
-                raise AssertionError(f"{C.SKIP_HEADER} is not of type bool")
+            cls.check_type(key=C.SKIP_HEADER, value=metadata[C.SKIP_HEADER], expected_type=bool)
 
         if C.PARTITION_SCHEMA in keys:
             cls.validate_schema(metadata[C.PARTITION_SCHEMA])
 
         if C.PARTITION_PROJECTION in keys:
-            if not isinstance(metadata[C.PARTITION_PROJECTION], dict):
-                raise AssertionError(f"{C.PARTITION_PROJECTION} data is not a dict")
+            cls.check_type(key=C.PARTITION_PROJECTION, value=metadata[C.PARTITION_PROJECTION], expected_type=dict)
 
             for column in metadata[C.PARTITION_PROJECTION]:
-                if not isinstance(metadata[C.PARTITION_PROJECTION][column], dict):
-                    raise AssertionError( f"{C.PARTITION_PROJECTION}[{column}] data is not a dict")
+                cls.check_type(
+                    key=f'{C.PARTITION_PROJECTION}[{column}]',
+                    value=metadata[C.PARTITION_PROJECTION][column],
+                    expected_type=dict
+                )
+
+    @classmethod
+    def check_type(
+        cls,
+        key: str,
+        value: str,
+        expected_type: Type
+    ) -> None:
+        """
+        Function to check the type of value is of expected type, and raise an Exception if not.
+
+        :param key: the key and identifier for the exception logging
+        :param value: the value to check
+        :param expected_type: the expected type for value
+        """
+        if not isinstance(value, expected_type):
+            raise InvalidTypeError(variable=key, expected_type=expected_type)

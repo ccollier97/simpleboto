@@ -8,7 +8,7 @@ class C:
     """
     Constants class for Athena related constants.
     """
-    # Required Parameters for Schema
+    # Allowed Parameters for Schema
     DATABASE_NAME = 'DATABASE_NAME'
     TABLE_NAME = 'TABLE_NAME'
     S3_BUCKET = 'S3_BUCKET'
