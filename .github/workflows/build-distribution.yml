@@ -2,10 +2,6 @@ name: Build Distribution
 
 on:
   workflow_call:
-    inputs:
-      version:
-        type: string
-        description: The version to use for the package build
 
 jobs:
   build:
@@ -18,8 +14,8 @@ jobs:
 
     - name: Update Version
       run: |
-        echo INPUT_VERSION
-        echo ${{ github.event.inputs.version }}
+        echo VERSION
+        echo $version
         sed -r "s/.*version = (.*).*/version = ${{ github.event.inputs.version }}/" setup.cfg > setup_tmp.cfg
         cat setup_tmp.cfg
         mv setup_tmp.cfg setup.cfg
