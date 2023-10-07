@@ -11,7 +11,27 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - **MINOR** version when you add functionality in a backwards compatible manner
 - **PATCH** version when you make backwards compatible bug fixes
 
+## [0.3.1] - 2023-10-07
+### Added
+- Added `GitHub` action to deal with packaging the project and publishing to PyPI.
+
+## [0.3.0] - 2023-10-01
+### Added
+- Added a `CLogger` class for logging functionality (to stream and a file).
+- Made a `Boto3Base` class for all other classes to inherit from; generic base class.
+
+## [0.2.1] - 2023-09-18
+### Added
+- Added `.join` functionality to `S3Url` objects.
+
+## [0.2.0] - 2023-09-17
+### Added
+- Initial `S3Client` class for working with `S3`; fully unit tested.
+- This includes functionality to **list objects** and also get **file sizes** from `S3`.
+
+## [0.1.0] - 2023-09-17
+### Added
+- Initial `S3Url` class for working with `S3`; fully unit tested.
 
 ## [0.0.1] - 2023-09-17
-
 - Initial project commit.
