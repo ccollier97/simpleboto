@@ -8,9 +8,6 @@ on:
     - feature/*
   workflow_call:
 
-env:
-  BRANCH_NAME: ${GITHUB_REF##*/}
-
 jobs:
   get-version:
     uses: ./.github/workflows/get-version.yml
@@ -49,7 +46,7 @@ jobs:
 
   publish-to-pypi:
     name: Publish Python distribution to PyPI
-    if: ${{ env.BRANCH_NAME == main }}
+    if: ${{ github.ref == 'refs/heads/main' }}
     needs:
     - build
     - publish-to-testpypi
