@@ -20,6 +20,10 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - Added new custom exceptions and changed previous ones to be more general.
 - Updated old custom exceptions to the new format.
 
+## [0.3.2] - 2023-10-07
+### Fixed
+- Error with `from typing import Self` import, so removed.
+
 ## [0.3.1] - 2023-10-07
 ### Added
 - Added `GitHub` action to deal with packaging the project and publishing to PyPI.
