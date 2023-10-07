@@ -20,7 +20,6 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - Added new custom exceptions and changed previous ones to be more general.
 - Updated old custom exceptions to the new format.
 
-
 ## [0.3.0] - 2023-10-01
 ### Added
 - Added a `CLogger` class for logging functionality (to stream and a file).
