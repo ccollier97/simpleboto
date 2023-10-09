@@ -3,7 +3,7 @@
 (c) Charlie Collier, all rights reserved
 """
 
-from typing import Dict, Union, Optional
+from typing import Dict, Optional, TypeVar
 
 from simpleboto.athena.constants import C
 from simpleboto.athena.utils.data_types import (
@@ -18,7 +18,8 @@ from simpleboto.exceptions import (
 )
 from simpleboto.utils import Utils
 
-SchemaType = Dict[str, Union[DTypes]]
+DataTypes = TypeVar('DataTypes')
+SchemaType = Dict[str, DataTypes]
 
 
 class Schema:
@@ -102,7 +103,7 @@ class Schema:
     @classmethod
     def validate_dtype(
         cls,
-        current_dtype: Union[DTypes]
+        current_dtype: DataTypes
     ) -> None:
         """
         Function to validate the specific data type.
