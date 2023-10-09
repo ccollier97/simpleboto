@@ -1,5 +1,7 @@
-from simpleboto.utils.functions import get_provided_parameters
+from simpleboto.utils.functions import (
+    Utils
+)
 
 __all__ = [
-    'get_provided_parameters'
+    'Utils'
 ]

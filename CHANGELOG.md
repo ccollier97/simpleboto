@@ -11,6 +11,15 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - **MINOR** version when you add functionality in a backwards compatible manner
 - **PATCH** version when you make backwards compatible bug fixes
 
+## [0.4.0] - 2023-10-07
+### Added
+- Added `AthenaClient` class with **CREATE TABLE** functionality.
+- Also added `Schema` and `data_types` in order to create _schema_ which can be used as input for the **CREATE TABLE** functionality.
+### Amended
+- Put the utility functions into a `Utils` class.
+- Added new custom exceptions and changed previous ones to be more general.
+- Updated old custom exceptions to the new format.
+
 ## [0.3.2] - 2023-10-07
 ### Fixed
 - Error with `from typing import Self` import, so removed.

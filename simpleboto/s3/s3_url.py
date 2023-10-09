@@ -9,7 +9,6 @@ from simpleboto.exceptions import (
     S3DelimiterError,
     NoParameterError
 )
-from simpleboto.utils import get_provided_parameters
 
 
 class S3Url(str):
@@ -33,8 +32,6 @@ class S3Url(str):
         :param key: the S3 key
         :param prefix: the S3 prefix; ignored if key is provided
         """
-        provided_params = get_provided_parameters({'url': url, 'bucket': bucket, 'key': key, 'prefix': prefix})
-
         if url:
             return super().__new__(cls, cls.__validate_url(url))
         elif bucket:
@@ -46,9 +43,9 @@ class S3Url(str):
                 url = bucket
             return super().__new__(cls, cls.__validate_url(url))
         elif key or prefix:
-            raise NoParameterError(cls.__name__, req_param='bucket', arguments=provided_params)
+            raise NoParameterError(param='bucket', context=cls.__name__)
         else:
-            raise NoParameterError(cls.__name__, req_param='ANY')
+            raise NoParameterError(param='ANY', context=cls.__name__)
 
     @staticmethod
     def __validate_url(

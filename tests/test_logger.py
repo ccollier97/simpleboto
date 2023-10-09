@@ -15,7 +15,6 @@ class TestLogger(BaseTest):
     def setUp(self) -> None:
         super().setUp()
 
-        self.data_dir = os.path.join(self.test_data_dir, 'test_logger')
         self.log_test_path = os.path.join(self.tmp_dir, 'test_logs.txt')
 
     def test_debug_logging(self) -> None:
@@ -52,12 +51,12 @@ class TestLogger(BaseTest):
         log_instance.info(message="TEST INFO LOG")
         log_instance.warning(message="TEST WARNING LOG")
 
-        with open(os.path.join(self.data_dir, 'test_logs.txt')) as f:
+        with open(self.log_test_path) as f:
             expected_logs = f.read()
 
         ts_regex = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3}'
-        ignore_time_logs = [re.sub(ts_regex, '', i) for i in expected_logs.split('\n')]
+        ignore_time_logs = [re.sub(ts_regex, '', i) for i in expected_logs.split('\n')][:-1]
         self.assertListEqual(ignore_time_logs, [
-            'test_logger |  | INFO     | TEST INFO LOG',
-            'test_logger |  | WARNING  | TEST WARNING LOG'
+            f'{__name__} |  | INFO     | TEST INFO LOG',
+            f'{__name__} |  | WARNING  | TEST WARNING LOG'
         ])
