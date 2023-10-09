@@ -18,7 +18,7 @@ from simpleboto.exceptions import (
 )
 from simpleboto.utils import Utils
 
-SchemaType = Dict[str, Union[*DTypes]]
+SchemaType = Dict[str, Union[DTypes]]
 
 
 class Schema:
@@ -102,7 +102,7 @@ class Schema:
     @classmethod
     def validate_dtype(
         cls,
-        current_dtype: Union[*DTypes]
+        current_dtype: Union[DTypes]
     ) -> None:
         """
         Function to validate the specific data type.
