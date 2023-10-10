@@ -11,6 +11,10 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - **MINOR** version when you add functionality in a backwards compatible manner
 - **PATCH** version when you make backwards compatible bug fixes
 
+## [0.4.1] - 2023-10-10
+### Fixed
+- Manifest includes `.sql` files now; as was excluding the CREATE TABLE SQL query before, causing errors.
+
 ## [0.4.1] - 2023-10-09
 ### Fixed
 - Issue with unpacking in typing hint (in Python version `3.10` and less); removed.
