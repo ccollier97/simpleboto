@@ -416,8 +416,7 @@ class TestAthenaClient(BaseTest):
                 C.TABLE_NAME: 'test_table',
                 C.S3_BUCKET: 'test-bucket',
                 C.S3_PREFIX: 'test_prefix',
-                C.FILE_FORMAT: C.PARQUET_,
-                C.FILE_COMPRESSION: C.SNAPPY_,
+                C.FILE_FORMAT: C.CSV_,
                 C.PARTITION_SCHEMA: {
                     'COLUMN4': StringDType()
                 },

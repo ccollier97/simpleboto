@@ -30,8 +30,7 @@ class Schema:
         C.TABLE_NAME,
         C.S3_BUCKET,
         C.S3_PREFIX,
-        C.FILE_FORMAT,
-        C.FILE_COMPRESSION
+        C.FILE_FORMAT
     ]
     REQUIRED_ATHENA_FORMAT = [
         C.PARQUET_,
