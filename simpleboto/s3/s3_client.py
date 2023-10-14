@@ -76,3 +76,26 @@ class S3Client(Boto3Base):
         objects: List[dict] = self.list(s3_url=s3_url, with_meta=True)
 
         return sum(ele['Size'] for ele in objects)
+
+    def copy_objects(
+            self,
+            s3_url_src: S3Url,
+            s3_url_dst: S3Url,
+            with_meta: Optional[bool] = False
+    ) -> None:
+        """
+        copy objects from source url to destination url.
+         If source and destination are the same, or the destination exists, exception is raised
+        :param s3_url_src: an S3Url object of either a single object or entire prefix in S3 which needs to be copied
+        :param s3_url_dst: an S3Url object of directory where source file or prefix needs to be copied into
+        :param with_meta: flag for including metadata in copy
+        :return: None
+        """
+        objects_to_copy = self.list(s3_url_src)
+        if len(objects_to_copy) == 1:
+            if s3_url_dst.prefix:
+                new_key = '/'.join([s3_url_dst.prefix, s3_url_src.key])
+                self.s3.copy({"Bucket": s3_url_src.bucket, "Key": s3_url_src.key}, s3_url_dst.bucket, new_key)
+            else:
+                self.s3.copy({"Bucket": s3_url_src.bucket, "Key": s3_url_src.key}, s3_url_dst.url, s3_url_dst.key)
+

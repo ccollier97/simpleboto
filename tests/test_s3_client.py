@@ -11,6 +11,7 @@ from moto import mock_s3
 
 from simpleboto import S3Client, S3Url
 from tests.base_test import BaseTest, OS_ENVIRON
+from botocore.exceptions import ClientError
 
 
 @mock_s3
@@ -19,6 +20,7 @@ class TestS3Client(BaseTest):
         super().setUp()
 
         self.bucket_name = 'test-bucket'
+        self.bucket_name_alternate = 'test-bucket_2' #todo:
 
         with mock.patch.dict(OS_ENVIRON, self.env_vars):
             self.s3_client = S3Client(region_name=os.getenv('REGION'))
@@ -80,3 +82,69 @@ class TestS3Client(BaseTest):
             self.s3_client.size(s3_url=S3Url(bucket=self.bucket_name, key='prefix2/file4')),
             4
         )
+
+    def test_copy_file_with_key(self) -> None:
+        self._upload_to_s3()
+        self.s3_client.copy_objects(s3_url_src=S3Url(bucket=self.bucket_name, key='prefix1/file1'),
+                                    s3_url_dst=S3Url(bucket=self.bucket_name, key='file1'))
+        objects = self.s3_client.list(
+            S3Url(bucket=self.bucket_name, prefix='prefix3')
+        )
+        self.assertEqual(objects, [
+            S3Url(bucket=self.bucket_name, key='prefix3/prefix1/file1')
+        ]) #todo: check the contents
+
+    def test_copy_file_without_key(self) -> None:
+        self._upload_to_s3()
+        self.s3_client.copy_objects(s3_url_src=S3Url(bucket=self.bucket_name, key='prefix1/file1'),
+                                    s3_url_dst=S3Url(bucket=self.bucket_name, prefix='prefix3'))
+        objects = self.s3_client.list(
+            S3Url(bucket=self.bucket_name, prefix='prefix3')
+        )
+        self.assertEqual(objects, [
+            S3Url(bucket=self.bucket_name, key='prefix3/prefix1/file1')
+        ]) #todo: check the contents
+
+    def test_copy_file_different_bucket(self) -> None:
+        self._upload_to_s3()
+        self.s3_client.copy_objects(s3_url_src=S3Url(bucket=self.bucket_name, key='prefix1/file1'),
+                                    s3_url_dst=S3Url(bucket=self.bucket_name_alternate, key='prefix3/file2'))
+        objects = self.s3_client.list(
+            S3Url(bucket=self.bucket_name_alternate, prefix='prefix3')
+        )
+        self.assertEqual(objects, [
+            S3Url(bucket=self.bucket_name_alternate, key='prefix3/file2')
+        ]) # todo: check the contents
+
+    def test_copy_directory(self):
+        pass
+
+    def test_copy_nested_directory(self):
+        pass
+
+    def test_source_not_found(self):
+        pass
+
+    def test_destination_exists(self):
+        pass  # should fail. ask to delete instead of overwrite
+
+    def test_rewrite_error(self):
+        pass  # ClientError
+
+    def large_file_copy(self):
+        pass
+
+    def different_destination_permissions(self):
+        pass
+
+    def copy_from_local(self):
+        pass
+
+    def copy_to_local(self):
+        pass
+
+
+
+
+
+
