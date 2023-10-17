@@ -289,7 +289,7 @@ class AthenaClient(Boto3Base):
                 raise UnexpectedParameterError(param=type_, possible_values=supported_proj_types)
 
             function_name = f'get_{type_}_projection'
-            tbl_props.update(cls.__getattribute__(cls, function_name)(column, metadata))
+            tbl_props.update(getattr(cls, function_name)(column, metadata))
 
         return tbl_props
 
