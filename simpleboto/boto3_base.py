@@ -28,3 +28,5 @@ class Boto3Base:
 
         self.session = boto3_session if boto3_session else boto3.Session()
         self.client = self.session.client(service_name=service_name, **kwargs)
+
+        self.class_name = self.__class__.__name__

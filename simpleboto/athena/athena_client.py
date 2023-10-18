@@ -8,6 +8,7 @@ from typing import Optional, Dict, Any
 
 import boto3
 
+from simpleboto.logs import CLogger
 from simpleboto.athena.constants import C
 from simpleboto.athena.utils.schema import Schema, SchemaType
 from simpleboto.boto3_base import Boto3Base
@@ -17,6 +18,8 @@ from simpleboto.exceptions import (
 )
 from simpleboto.s3.s3_url import S3Url
 from simpleboto.utils import Utils
+
+logger = CLogger(__name__)
 
 
 class AthenaClient(Boto3Base):
@@ -62,8 +65,10 @@ class AthenaClient(Boto3Base):
         :param schema: the Schema class used to generate the information needed for the query
         """
         metadata = schema.metadata
+        logger.info("Validating Schema metadata")
         cls.validate_metadata(metadata)
 
+        logger.info("Loading CREATE TABLE SQL template")
         sql_template = Utils.get_file(location=os.path.join(cls.SQL_DIR, 'create_table.sql'))
 
         kwargs = {
@@ -186,6 +191,8 @@ class AthenaClient(Boto3Base):
 
         :param metadata: the Schema metadata containing the S3 bucket and prefix keys
         """
+        logger.info("Getting SERDE for CREATE TABLE")
+
         serde = {
             C.PARQUET_: 'ql.io.parquet.serde.ParquetHiveSerDe',
             C.CSV_: 'serde2.OpenCSVSerde'
@@ -204,6 +211,8 @@ class AthenaClient(Boto3Base):
         :param metadata: the Schema metadata containing the S3 bucket and prefix keys
         :return: the S3 URL of the form s3://{bucket}/{prefix}
         """
+        logger.info("Getting LOCATION information")
+
         bucket = metadata.get(C.S3_BUCKET)
         prefix = metadata.get(C.S3_PREFIX)
 
@@ -224,6 +233,7 @@ class AthenaClient(Boto3Base):
         partition_schema = metadata.get(C.PARTITION_SCHEMA)
 
         if partition_schema:
+            logger.info("Getting PARTITIONED BY information")
             column_schema = cls.get_column_schema(column_schema=partition_schema)
             partition_str = f'\nPARTITIONED BY (\n\t{column_schema}\n)'
 
@@ -240,6 +250,7 @@ class AthenaClient(Boto3Base):
 
         :param metadata: the Schema metadata containing the S3 bucket and prefix keys
         """
+        logger.info("Getting TBLPROPERTIES")
         tbl_props = {}
 
         f_format = cls.get_key(C.FILE_FORMAT, metadata)
@@ -278,6 +289,7 @@ class AthenaClient(Boto3Base):
             see the documentation for a full explanation of the allowed values:
             https://docs.aws.amazon.com/athena/latest/ug/partition-projection-supported-types.html
         """
+        logger.info("Getting PARTITION PROJECTION information")
         tbl_props = {}
         supported_proj_types = ['enum', 'integer', 'date', 'injected']
 

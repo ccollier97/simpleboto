@@ -11,6 +11,10 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - **MINOR** version when you add functionality in a backwards compatible manner
 - **PATCH** version when you make backwards compatible bug fixes
 
+## [0.5.0] - 2023-10-17
+### Added
+- Added logging to the `AthenaClient` class for debugging purposes.
+
 ## [0.4.4] - 2023-10-17
 ### Fixed
 - Issue with `cls.__getattribute__` as raised a `TypeError` due to `staticmethod` not being callable.
