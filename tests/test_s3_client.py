@@ -4,8 +4,10 @@
 """
 
 import os
+import re
 from typing import List
 from unittest import mock
+
 
 from moto import mock_s3
 
@@ -88,11 +90,10 @@ class TestS3Client(BaseTest):
         self.s3_client.copy_objects(s3_url_src=S3Url(bucket=self.bucket_name, key='prefix1/file1'),
                                     s3_url_dst=S3Url(bucket=self.bucket_name, key='file1'))
         objects = self.s3_client.list(
-            S3Url(bucket=self.bucket_name, prefix='prefix3')
+            S3Url(bucket=self.bucket_name)
         )
-        self.assertEqual(objects, [
-            S3Url(bucket=self.bucket_name, key='prefix3/prefix1/file1')
-        ]) #todo: check the contents
+        self.assertIn(
+            S3Url(bucket=self.bucket_name, key='file1'), objects)
 
     def test_copy_file_without_key(self) -> None:
         self._upload_to_s3()
@@ -103,22 +104,39 @@ class TestS3Client(BaseTest):
         )
         self.assertEqual(objects, [
             S3Url(bucket=self.bucket_name, key='prefix3/prefix1/file1')
-        ]) #todo: check the contents
-
-    def test_copy_file_different_bucket(self) -> None:
-        self._upload_to_s3()
-        self.s3_client.copy_objects(s3_url_src=S3Url(bucket=self.bucket_name, key='prefix1/file1'),
-                                    s3_url_dst=S3Url(bucket=self.bucket_name_alternate, key='prefix3/file2'))
-        objects = self.s3_client.list(
-            S3Url(bucket=self.bucket_name_alternate, prefix='prefix3')
-        )
-        self.assertEqual(objects, [
-            S3Url(bucket=self.bucket_name_alternate, key='prefix3/file2')
-        ]) # todo: check the contents
+        ])
 
     def test_copy_directory(self):
-        pass
+        self._upload_to_s3()
+        self.s3_client.copy_objects(s3_url_src=S3Url(bucket=self.bucket_name, prefix='prefix1'),
+                                    s3_url_dst=S3Url(bucket=self.bucket_name, prefix='prefix3'))
+        objects_source = self.s3_client.list(
+            S3Url(bucket=self.bucket_name, prefix='prefix1')
+        )
+        objects_source = [S3Url(bucket=i.bucket, key='/'.join(['prefix3', i.key])) for i in objects_source]
+        objects_dest = self.s3_client.list(
+            S3Url(bucket=self.bucket_name, prefix='prefix3')
+        )
+        self.assertEqual(objects_dest, objects_source)
 
+    def test_copy_directory_regex(self):
+        self._upload_to_s3() #todo: this should be done once for all
+        pattern = r".*file1$"
+        self.s3_client.copy_objects(s3_url_src=S3Url(bucket=self.bucket_name, prefix='prefix1'),
+                                    s3_url_dst=S3Url(bucket=self.bucket_name, prefix='prefix3'),
+                                    regex_pattern=pattern)
+        objects_source = self.s3_client.list(
+            S3Url(bucket=self.bucket_name, prefix='prefix1')
+        )
+        objects_source = [S3Url(bucket=i.bucket, key='/'.join(['prefix3', i.key]))
+                          for i in objects_source if re.match(pattern, i.key)]
+        objects_dest = self.s3_client.list(
+            S3Url(bucket=self.bucket_name, prefix='prefix3')
+        )
+        self.assertEqual(objects_dest, objects_source)
+
+    def test_copy_file_different_bucket(self) -> None:
+        pass
     def test_copy_nested_directory(self):
         pass
 

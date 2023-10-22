@@ -9,6 +9,7 @@ import boto3
 
 from simpleboto.boto3_base import Boto3Base
 from simpleboto.s3.s3_url import S3Url
+import re
 
 
 class S3Client(Boto3Base):
@@ -81,6 +82,7 @@ class S3Client(Boto3Base):
             self,
             s3_url_src: S3Url,
             s3_url_dst: S3Url,
+            regex_pattern: Optional[str] = None,
             with_meta: Optional[bool] = False
     ) -> None:
         """
@@ -88,14 +90,22 @@ class S3Client(Boto3Base):
          If source and destination are the same, or the destination exists, exception is raised
         :param s3_url_src: an S3Url object of either a single object or entire prefix in S3 which needs to be copied
         :param s3_url_dst: an S3Url object of directory where source file or prefix needs to be copied into
+        :param regex_pattern: regex for glob
         :param with_meta: flag for including metadata in copy
         :return: None
         """
         objects_to_copy = self.list(s3_url_src)
+        copy_dict = None
+        if regex_pattern:
+            objects_to_copy = [key for key in objects_to_copy if re.match(regex_pattern, key)]
+        if len(objects_to_copy) > 1:
+            copy_dict = {k: S3Url(bucket=s3_url_dst.bucket, key='/'.join([s3_url_dst.prefix, k.key]))
+                     for k in objects_to_copy}
         if len(objects_to_copy) == 1:
             if s3_url_dst.prefix:
-                new_key = '/'.join([s3_url_dst.prefix, s3_url_src.key])
-                self.s3.copy({"Bucket": s3_url_src.bucket, "Key": s3_url_src.key}, s3_url_dst.bucket, new_key)
+                dest_key = '/'.join([s3_url_dst.prefix, objects_to_copy[0].key])
             else:
-                self.s3.copy({"Bucket": s3_url_src.bucket, "Key": s3_url_src.key}, s3_url_dst.url, s3_url_dst.key)
-
+                dest_key = s3_url_dst.key
+            copy_dict = {k: S3Url(bucket=s3_url_dst.bucket, key=dest_key) for k in objects_to_copy}
+        for source, destination in copy_dict.items():
+            self.s3.copy({"Bucket": source.bucket, "Key": source.key}, destination.bucket, destination.key)
