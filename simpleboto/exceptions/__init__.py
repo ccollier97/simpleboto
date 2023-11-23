@@ -4,7 +4,8 @@ from simpleboto.exceptions.custom_exceptions import (
     NoParameterError,
     InvalidSchemaTypeError,
     AttributeConditionError,
-    UnexpectedParameterError
+    UnexpectedParameterError,
+    KeyNotFound
 )
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     'NoParameterError',
     'InvalidSchemaTypeError',
     'AttributeConditionError',
-    'UnexpectedParameterError'
+    'UnexpectedParameterError',
+    'KeyNotFound'
 ]

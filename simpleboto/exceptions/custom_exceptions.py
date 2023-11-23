@@ -5,6 +5,7 @@
 
 import inspect
 from collections.abc import Iterable as Iter
+# from simpleboto.s3.s3_url import S3Url
 from typing import (
     Any,
     Type,
@@ -30,6 +31,24 @@ class S3DelimiterError(Exception):
 
         super().__init__(self.err_msg)
 
+
+class KeyNotFound(Exception):
+    """
+    Exception class for specifying a data type not valid for a Schema.
+    """
+    def __init__(
+        self,
+        url: str
+    ) -> None:
+        """
+        :param url:S3 Location where no key was found
+
+        """
+        self.url = url
+
+        self.err_msg = f"The S3 URL {url} does not contain the required Key"
+
+        super().__init__(self.err_msg)
 
 class InvalidTypeError(Exception):
     """

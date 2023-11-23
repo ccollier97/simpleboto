@@ -5,15 +5,15 @@
 
 import os
 import re
+from moto import mock_s3
 from typing import List
 from unittest import mock
-
-
-from moto import mock_s3
+from botocore.exceptions import ClientError
 
 from simpleboto import S3Client, S3Url
+from simpleboto.exceptions import KeyNotFound
 from tests.base_test import BaseTest, OS_ENVIRON
-from botocore.exceptions import ClientError
+
 
 
 @mock_s3
@@ -22,7 +22,6 @@ class TestS3Client(BaseTest):
         super().setUp()
 
         self.bucket_name = 'test-bucket'
-        self.bucket_name_alternate = 'test-bucket_2' #todo:
 
         with mock.patch.dict(OS_ENVIRON, self.env_vars):
             self.s3_client = S3Client(region_name=os.getenv('REGION'))
@@ -113,14 +112,14 @@ class TestS3Client(BaseTest):
         objects_source = self.s3_client.list(
             S3Url(bucket=self.bucket_name, prefix='prefix1')
         )
-        objects_source = [S3Url(bucket=i.bucket, key='/'.join(['prefix3', i.key])) for i in objects_source]
+        objects_expected = [S3Url(bucket=i.bucket, key='/'.join(['prefix3', i.key])) for i in objects_source]
         objects_dest = self.s3_client.list(
             S3Url(bucket=self.bucket_name, prefix='prefix3')
         )
-        self.assertEqual(objects_dest, objects_source)
+        self.assertEqual(objects_dest, objects_expected)
 
     def test_copy_directory_regex(self):
-        self._upload_to_s3() #todo: this should be done once for all
+        self._upload_to_s3()
         pattern = r".*file1$"
         self.s3_client.copy_objects(s3_url_src=S3Url(bucket=self.bucket_name, prefix='prefix1'),
                                     s3_url_dst=S3Url(bucket=self.bucket_name, prefix='prefix3'),
@@ -128,41 +127,35 @@ class TestS3Client(BaseTest):
         objects_source = self.s3_client.list(
             S3Url(bucket=self.bucket_name, prefix='prefix1')
         )
-        objects_source = [S3Url(bucket=i.bucket, key='/'.join(['prefix3', i.key]))
+        objects_expected= [S3Url(bucket=i.bucket, key='/'.join(['prefix3', i.key]))
                           for i in objects_source if re.match(pattern, i.key)]
         objects_dest = self.s3_client.list(
             S3Url(bucket=self.bucket_name, prefix='prefix3')
         )
-        self.assertEqual(objects_dest, objects_source)
+        self.assertEqual(objects_dest, objects_expected)
 
-    def test_copy_file_different_bucket(self) -> None:
-        pass
-    def test_copy_nested_directory(self):
-        pass
-
-    def test_source_not_found(self):
-        pass
+    def test_file_not_found(self):
+        self._upload_to_s3()
+        with self.assertRaises(KeyNotFound):
+            self.s3_client.copy_objects(s3_url_src=S3Url(bucket=self.bucket_name, key='prefix2/file1'),
+                                        s3_url_dst=S3Url(bucket=self.bucket_name, prefix='prefix3'))
 
     def test_destination_exists(self):
-        pass  # should fail. ask to delete instead of overwrite
+        self._upload_to_s3()
+        error_message = "Keys: \['prefix1/file1\'] already in destination: s3://test-bucket"
+        with self.assertRaisesRegex(ValueError, error_message):
+            self.s3_client.copy_objects(s3_url_src=S3Url(bucket=self.bucket_name, key='prefix1/file1'),
+                                        s3_url_dst=S3Url(bucket=self.bucket_name))
 
     def test_rewrite_error(self):
-        pass  # ClientError
+        self._upload_to_s3()
 
-    def large_file_copy(self):
-        pass
-
-    def different_destination_permissions(self):
-        pass
-
-    def copy_from_local(self):
-        pass
-
-    def copy_to_local(self):
-        pass
-
-
-
-
+        self.s3_client.copy_objects(s3_url_src=S3Url(bucket=self.bucket_name, key='prefix1/file1'),
+                                    s3_url_dst=S3Url(bucket=self.bucket_name), rewrite=True)
+        objects = self.s3_client.list(
+            S3Url(bucket=self.bucket_name)
+        )
+        self.assertIn(
+            S3Url(bucket=self.bucket_name, key='prefix1/file1'), objects)
 
 
