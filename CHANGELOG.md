@@ -11,7 +11,16 @@ That is, given a version number `MAJOR.MINOR.PATCH`, increment the:
 - **MINOR** version when you add functionality in a backwards compatible manner
 - **PATCH** version when you make backwards compatible bug fixes
 
-## [0.4.1] - 2023-10-10
+## [0.4.4] - 2023-10-17
+### Fixed
+- Issue with `cls.__getattribute__` as raised a `TypeError` due to `staticmethod` not being callable.
+- Have changed this to `getattr(cls, <>)` and no longer errors.
+
+## [0.4.3] - 2023-10-13
+### Amended
+- File compression no longer a required parameter for CREATE TABLE.
+
+## [0.4.2] - 2023-10-10
 ### Fixed
 - Manifest includes `.sql` files now; as was excluding the CREATE TABLE SQL query before, causing errors.
 

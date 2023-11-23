@@ -104,12 +104,13 @@ class AthenaClient(Boto3Base):
                 possible_values=Schema.REQUIRED_ATHENA_FORMAT
             )
 
-        if cls.get_key(C.FILE_COMPRESSION, metadata) not in Schema.REQUIRED_ATHENA_COMPRESSION:
-            raise UnexpectedParameterError(
-                param=C.FILE_COMPRESSION,
-                context=context,
-                possible_values=Schema.REQUIRED_ATHENA_COMPRESSION
-            )
+        if C.FILE_COMPRESSION in metadata:
+            if cls.get_key(C.FILE_COMPRESSION, metadata) not in Schema.REQUIRED_ATHENA_COMPRESSION:
+                raise UnexpectedParameterError(
+                    param=C.FILE_COMPRESSION,
+                    context=context,
+                    possible_values=Schema.REQUIRED_ATHENA_COMPRESSION
+                )
 
         cls.validate_metadata_partition(metadata=metadata, context=context)
 
@@ -244,10 +245,10 @@ class AthenaClient(Boto3Base):
         f_format = cls.get_key(C.FILE_FORMAT, metadata)
         f_compression = cls.get_key(C.FILE_COMPRESSION, metadata)
 
-        tbl_props.update({
-            'classification': f_format,
-            'compressionType': f_compression
-        })
+        tbl_props.update({'classification': f_format})
+
+        if f_compression:
+            tbl_props.update({'compressionType': f_compression})
 
         if f_format == C.CSV_ and metadata.get(C.SKIP_HEADER):
             tbl_props.update({'skip.header.line.count': '1'})
@@ -288,7 +289,7 @@ class AthenaClient(Boto3Base):
                 raise UnexpectedParameterError(param=type_, possible_values=supported_proj_types)
 
             function_name = f'get_{type_}_projection'
-            tbl_props.update(cls.__getattribute__(cls, function_name)(column, metadata))
+            tbl_props.update(getattr(cls, function_name)(column, metadata))
 
         return tbl_props
 

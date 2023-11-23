@@ -7,12 +7,11 @@ PARTITIONED BY (
 	`COLUMN4` string
 )
 ROW FORMAT SERDE
-    'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+    'org.apache.hadoop.hive.serde2.OpenCSVSerde'
 LOCATION
     's3://test-bucket/test_prefix/'
 TBLPROPERTIES (
-    'classification' = 'parquet',
-	'compressionType' = 'snappy',
+    'classification' = 'csv',
 	'projection.enabled' = 'TRUE',
 	'projection.COLUMN4.type' = 'enum',
 	'projection.COLUMN4.values' = 'VAL1,VAL2'
